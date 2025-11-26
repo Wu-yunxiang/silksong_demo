@@ -25,7 +25,7 @@ public class GameEngine {
         this.windowHandle = renderer.getWindowHandle();
         this.inputManager = InputManager.getInstance();
         this.isRunning = true;
-        renderer.getScene().getGameObjects();
+        renderer.getScene().getGameObjects().add(new Character());
         setupInput();
     }
 
@@ -36,7 +36,7 @@ public class GameEngine {
             long currentTime = System.nanoTime();
             
             if (currentTime - lastFrameTime >= frameTimeNanos) {
-                GameLogic.processFrame((currentTime - lastFrameTime) / 1_000_000_000.0f);
+                GameLogic.processFrame((currentTime - lastFrameTime) / 1_000_000_000.0f,renderer.getScene().getMainCharacter());
                 renderer.render();
                 lastFrameTime = currentTime;
             }
