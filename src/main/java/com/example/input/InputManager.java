@@ -13,6 +13,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import org.lwjgl.glfw.GLFW;
 
 public class InputManager {
     private static InputManager instance;//所有inputmanager实例的共有指针
@@ -44,6 +45,10 @@ public class InputManager {
         for (int i = 0; i < mouseButtonsJustPressed.length; i++) {
             mouseButtonsJustPressed[i] = false;
         }
+    }
+    
+    public void pollEvents() {
+        GLFW.glfwPollEvents();
     }
     
     public void onKeyPressed(int keyCode) {

@@ -12,7 +12,9 @@ import com.example.gameobjects.character.bodyparts.Foot;
 import com.example.gameobjects.character.bodyparts.Hair;
 import com.example.gameobjects.character.bodyparts.Hand;
 import com.example.gameobjects.character.bodyparts.Leg;
+import com.example.gameobjects.character.bodyparts.PixelMap;
 import com.example.math.Vector2;
+import com.example.core.CharacterBehaviorEvent;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -36,9 +38,12 @@ public class Character extends GameObject {
     private Health health;               // 血量 (Health)
     private Energy energy;               // 能量 (Energy)
     private List<Skill> skills;          // 技能列表 (Skills List)
-    private CharacterMode mode;          // 角色模式 (Character Mode)
-    
+    private CharacterMode mode;          // 角色模式 (Character Mode)       //
     private List<BodyPart> bodyParts;    // 身体部件列表 (Body Parts List)
+
+    private List<CharacterBehaviorEvent> behaviorEvents; // 当前帧触发的行为事件列表
+    private int remainingAirJumps;   // 当前腾空跳跃剩余次数
+    private Facing facing; 
 
     public Character() {
         this.effects = new ArrayList<>();
@@ -46,7 +51,9 @@ public class Character extends GameObject {
         this.acceleration = new Vector2();
         this.baseposition = new Vector2();
         this.mode = CharacterMode.STANDING;
-        
+        this.behaviorEvents = new ArrayList<>();
+        this.remainingAirJumps = 2; 
+        this.facing = Facing.RIGHT; // 默认朝向为右
         this.bodyParts = new ArrayList<>();
         this.bodyParts.add(new Hair());
         this.bodyParts.add(new Face());
@@ -72,6 +79,11 @@ public class Character extends GameObject {
         DASHING,  // 冲刺
         HEALING   // 治疗
     }
+
+    public enum Facing {
+        LEFT,
+        RIGHT
+    }
     
     public CharacterMode getMode() {
         return mode;
@@ -88,14 +100,37 @@ public class Character extends GameObject {
 
     @Override
     public void render() {
-        if (mode == CharacterMode.STANDING) {
-            // 渲染站立状态
-        } else if (mode == CharacterMode.WALKING) {
-            // 渲染行走状态
-        } else if (mode == CharacterMode.DASHING) {
-            // 渲染冲刺状态
-        } else if (mode == CharacterMode.HEALING) {
-            // 渲染回血状态
+        for(BodyPart part : bodyParts) {
+            PixelMap pixels = part.getPixels(mode);
+            renderer.renderPixelMap(pixels, baseposition);
         }
+    }
+
+    public List<CharacterBehaviorEvent> getBehaviorEvents() {
+        return behaviorEvents;
+    }
+
+    public void setBehaviorEvents(List<CharacterBehaviorEvent> behaviorEvents) {
+        this.behaviorEvents = behaviorEvents;
+    }
+
+    public boolean isOnGround(){
+        return baseposition.y <= 0;//to do 
+    }
+
+    public int getRemainingAirJumps() {
+        return remainingAirJumps;
+    }
+
+    public void setRemainingAirJumps(int remainingAirJumps) {
+        this.remainingAirJumps = remainingAirJumps;
+    }
+
+    public Facing getFacing() {
+        return facing;
+    }
+
+    public void setFacing(Facing facing) {
+        this.facing = facing;
     }
 }

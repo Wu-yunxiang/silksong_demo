@@ -18,4 +18,9 @@ character主体包含了头发，脸，身体，手，腿，脚这几部分，�
 
 不管创建多少个bodypart，同一种part硬编码出来的stateconfigs是固定的，现在的逻辑不正确，应该用 把statecomfigs设置为static?各个part 的构造方法私有，但是可以
 
+k跳跃，第一次跳起来未落地再k触发二段跳，w上，s下，a左，d右，l冲刺，短摁q技能，j攻击，长摁q回血
+w+j  s+j 分别是上批和下批
+对于processinput来说，我认为需要
 
+
+待定：onground判断，长按回血逻辑

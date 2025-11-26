@@ -11,7 +11,7 @@ public class Leg extends BodyPart {
 
     public enum LegState {
         STANDING,   // 站立
-        STRIDING,   // 迈步 (行走/冲刺)
+        STRIDING,   // 行走
         BENT        // 弯曲
     }
 

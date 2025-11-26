@@ -13,6 +13,8 @@ import com.example.rendering.Renderer;
  * - 这里只声明抽象方法，具体实现由子类提供。
  */
 public abstract class GameObject {
+	public Renderer renderer;
+	public boolean isRendered;
 	/**
 	 * 每帧更新对象状态（逻辑层调用）
 	 * @param deltaTime 时间增量（秒）
@@ -23,5 +25,5 @@ public abstract class GameObject {
 	 * 渲染回调（由渲染器/渲染层调用）
 	 * @param renderer 渲染器接口
 	 */
-	public abstract void render(Renderer renderer);
+	public abstract void render();
 }
