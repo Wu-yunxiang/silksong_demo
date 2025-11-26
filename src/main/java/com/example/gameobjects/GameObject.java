@@ -1,7 +1,5 @@
 package com.example.gameobjects;
 
-import com.example.rendering.Renderer;
-
 /**
  * 游戏对象基类（抽象）。
  *
@@ -13,7 +11,6 @@ import com.example.rendering.Renderer;
  * - 这里只声明抽象方法，具体实现由子类提供。
  */
 public abstract class GameObject {
-	public Renderer renderer;
 	public boolean isRendered;
 	/**
 	 * 每帧更新对象状态（逻辑层调用）

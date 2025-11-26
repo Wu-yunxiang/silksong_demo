@@ -13,6 +13,7 @@ import com.example.gameobjects.character.bodyparts.Hair;
 import com.example.gameobjects.character.bodyparts.Hand;
 import com.example.gameobjects.character.bodyparts.Leg;
 import com.example.gameobjects.character.bodyparts.PixelMap;
+import com.example.rendering.Renderer;
 import com.example.math.Vector2;
 import com.example.core.CharacterBehaviorEvent;
 import java.util.ArrayList;
@@ -77,7 +78,8 @@ public class Character extends GameObject {
         STANDING, // 站立
         WALKING,  // 行走
         DASHING,  // 冲刺
-        HEALING   // 治疗
+        HEALING,  // 治疗
+        ATTACK    // 攻击
     }
 
     public enum Facing {
@@ -102,7 +104,7 @@ public class Character extends GameObject {
     public void render() {
         for(BodyPart part : bodyParts) {
             PixelMap pixels = part.getPixels(mode);
-            renderer.renderPixelMap(pixels, baseposition);
+            Renderer.renderPixelMap(pixels, baseposition);
         }
     }
 
@@ -133,4 +135,5 @@ public class Character extends GameObject {
     public void setFacing(Facing facing) {
         this.facing = facing;
     }
+
 }

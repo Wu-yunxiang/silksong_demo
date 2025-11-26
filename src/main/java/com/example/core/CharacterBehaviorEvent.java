@@ -5,8 +5,6 @@ package com.example.core;
  * 定义了由输入触发的各种角色行为
  */
 public enum CharacterBehaviorEvent {
-    MOVE_UP,
-    MOVE_DOWN,
     MOVE_LEFT,
     MOVE_RIGHT,
     JUMP,

@@ -2,6 +2,8 @@ package com.example.core;
 
 import com.example.input.InputManager;
 import com.example.gameobjects.character.Character;
+import com.example.gameobjects.character.Character.CharacterMode;
+import com.example.gameobjects.character.Character.Facing;
 import java.util.List;
 
 
@@ -26,7 +28,47 @@ public class GameLogic {
         inputManager.pollEvents();
         List<CharacterBehaviorEvent> events = InputEventGenerator.generate(inputManager, character);
         
+        // 1. Determine Facing
+        for (CharacterBehaviorEvent event : events) {
+            if (event == CharacterBehaviorEvent.MOVE_LEFT) {
+                character.setFacing(Facing.LEFT);
+            } else if (event == CharacterBehaviorEvent.MOVE_RIGHT) {
+                character.setFacing(Facing.RIGHT);
+            }
+        }
+
+        // 2. Determine Character Mode
+        CharacterMode newMode = CharacterMode.STANDING;
+        
+        boolean isMoving = events.contains(CharacterBehaviorEvent.MOVE_LEFT) || events.contains(CharacterBehaviorEvent.MOVE_RIGHT);
+        if (isMoving) {
+            newMode = CharacterMode.WALKING;
+        }
+        
+        if (events.contains(CharacterBehaviorEvent.DASH)) {
+            newMode = CharacterMode.DASHING;
+        }
+        
+        if (events.contains(CharacterBehaviorEvent.HEAL)) {
+            newMode = CharacterMode.HEALING;
+        }
+        
+        if (events.contains(CharacterBehaviorEvent.ATTACK_NORMAL) || 
+            events.contains(CharacterBehaviorEvent.ATTACK_UP) || 
+            events.contains(CharacterBehaviorEvent.ATTACK_DOWN)) {
+            newMode = CharacterMode.ATTACK;
+        }
+        
+        character.setMode(newMode);
+
+        // 3. Effects Logic
+        for (CharacterBehaviorEvent event : events) {
+            switch (event) {
+                
+            }
+        }
     }
+    
     private static void updateGameLogic(float deltaTime) {
         // 更新游戏对象状态
     }

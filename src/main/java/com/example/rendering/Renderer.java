@@ -22,8 +22,7 @@ public class Renderer {
         windowHandle = GLFW.glfwCreateWindow(800, 600, "Journey Demo", MemoryUtil.NULL, MemoryUtil.NULL);
     }
 
-        
-    public void renderPixelMap(PixelMap pixels, Vector2 baseposition) {
+    public static void renderPixelMap(PixelMap pixels, Vector2 baseposition) {
         // TODO: 在指定位置绘制像素图
     }
 

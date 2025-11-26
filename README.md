@@ -22,5 +22,7 @@ k跳跃，第一次跳起来未落地再k触发二段跳，w上，s下，a左，
 w+j  s+j 分别是上批和下批
 对于processinput来说，我认为需要
 
+给characterMode增加攻击这一模式修改与之相关的文件，其它都不变
+先取出events里决定人物朝向的事件更改，再取出决定charactermode的事件更改，再取出与特效相关的事件进行对应逻辑。只改processinput方法
 
 待定：onground判断，长按回血逻辑
