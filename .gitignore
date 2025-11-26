@@ -1,0 +1,35 @@
+# Maven build artifacts
+/target/
+
+# Eclipse / IntelliJ / VSCode
+/.idea/
+/.vscode/
+*.iml
+*.ipr
+*.iws
+
+# Compiled class and logs
+*.class
+*.log
+*.jar
+*.war
+*.ear
+hs_err_pid*
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Backup files
+*~
+*.swp
+
+# Maven / other
+dependency-reduced-pom.xml
+release.properties
+buildNumber.properties
+
+# Other
+out/
+/.settings/
