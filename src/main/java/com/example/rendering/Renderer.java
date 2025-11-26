@@ -1,10 +1,4 @@
 package com.example.rendering;
-import com.example.gameobjects.Character;
-import com.example.gameobjects.StaticObject;
-import com.example.gameobjects.Effect;
-import com.example.gameobjects.Skill;
-import com.example.gameobjects.Terrain;
-import com.example.scene.Scene;
 
 /**
  * 渲染器接口（Renderer）。

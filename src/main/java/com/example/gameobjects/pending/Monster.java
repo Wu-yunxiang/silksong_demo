@@ -1,4 +1,6 @@
-package com.example.gameobjects;
+package com.example.gameobjects.pending;
+
+import com.example.gameobjects.GameObject;
 
 /**
  * 怪物基类（抽象）。

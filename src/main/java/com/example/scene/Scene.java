@@ -1,7 +1,7 @@
 package com.example.scene;
 
 import java.util.List;
-
+import java.util.ArrayList;
 import com.example.gameobjects.GameObject;
 
 /**
@@ -14,6 +14,7 @@ import com.example.gameobjects.GameObject;
 public class Scene {
     private List<GameObject> gameObjects;
     public Scene() {
+        gameObjects = new ArrayList<>();
     }
     
     public List<GameObject> getGameObjects() {

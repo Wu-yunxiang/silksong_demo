@@ -1,11 +1,11 @@
 package com.example.rendering;
+
+import com.example.gameobjects.character.Character;
+import com.example.gameobjects.character.bodyparts.BodyPart;
+import com.example.gameobjects.character.bodyparts.PixelMap;
+import com.example.gameobjects.character.bodyparts.PixelMap.PixelData;
 import com.example.scene.Scene;
-import com.example.gameobjects.Character;
-import com.example.gameobjects.StaticObject;
-import com.example.gameobjects.Effect;
-import com.example.gameobjects.GameObject;
-import com.example.gameobjects.Skill;
-import com.example.gameobjects.Terrain;
+import java.util.List;
 
 /**
  * GPU 渲染器（GPURenderer）。
@@ -16,4 +16,31 @@ import com.example.gameobjects.Terrain;
  */
 public class GPURenderer implements Renderer {
 
+    public void render(Scene scene) {
+        // TODO: Iterate over scene objects and render them
+        // For now, we assume we have access to the character from the scene
+        // Character character = scene.getCharacter(); 
+        // renderCharacter(character);
+    }
+
+    public void renderCharacter(Character character) {
+        List<BodyPart> parts = character.getBodyParts();
+        Character.CharacterMode mode = character.getMode();
+
+        for (BodyPart part : parts) {
+            // 直接根据 CharacterMode 获取像素数据，具体的 State 映射由各 BodyPart 子类内部处理
+            PixelMap pixelMap = part.getPixels(mode);
+            
+            if (pixelMap != null && pixelMap.pixels != null) {
+                for (PixelData pixel : pixelMap.pixels) {
+                    drawPixel(pixel.relativeX, pixel.relativeY, pixel.r, pixel.g, pixel.b, pixel.a);
+                }
+            }
+        }
+    }
+
+    private void drawPixel(int x, int y, int r, int g, int b, int a) {
+        // Placeholder for actual GPU draw call
+        // System.out.println("Drawing pixel at " + x + ", " + y + " color: " + r + "," + g + "," + b);
+    }
 }

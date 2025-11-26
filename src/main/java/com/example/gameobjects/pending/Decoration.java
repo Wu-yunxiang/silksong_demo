@@ -1,5 +1,6 @@
-package com.example.gameobjects;
+package com.example.gameobjects.pending;
 
+import com.example.gameobjects.GameObject;
 import com.example.rendering.Renderer;
 
 /**
@@ -17,7 +18,7 @@ public class Decoration extends GameObject {
 	}
 
 	@Override
-	public void render(Renderer renderer) {
-		// 声明性实现：无具体渲染逻辑（占位）
+	public void render() {
+		// 声明性实现：无具体逻辑（占位）
 	}
 }
