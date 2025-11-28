@@ -1,23 +1,14 @@
 package com.example.gameobjects.character;
 
 import com.example.gameobjects.GameObject;
-import com.example.gameobjects.effect.Effect;
-import com.example.gameobjects.skill.Skill;
-import com.example.gameobjects.staticobject.Health;
-import com.example.gameobjects.staticobject.Energy;
-import com.example.gameobjects.character.bodyparts.BodyPart;
-import com.example.gameobjects.character.bodyparts.Body;
-import com.example.gameobjects.character.bodyparts.Face;
-import com.example.gameobjects.character.bodyparts.Foot;
-import com.example.gameobjects.character.bodyparts.Hair;
-import com.example.gameobjects.character.bodyparts.Hand;
-import com.example.gameobjects.character.bodyparts.Leg;
-import com.example.gameobjects.character.bodyparts.PixelMap;
-import com.example.rendering.Renderer;
+import com.example.math.PhysicsUtils;
+import com.example.math.Rect;
 import com.example.math.Vector2;
-import com.example.core.CharacterBehaviorEvent;
-import java.util.ArrayList;
-import java.util.List;
+import com.example.scene.GameScene;
+import com.example.gameobjects.skill.PurpleDragonConfig;
+import java.util.HashMap;
+import java.util.Map;
+
 
 /**
  * 角色类 (Character Class)
@@ -31,93 +22,140 @@ public class Character extends GameObject {
     private float modeDuration;          // mode持续时间 (Mode Duration)
     private boolean isImmune;            // 是否处于免疫状态 (Is Immune)
     private float immunityTime;          // 免疫时间 (Immunity Time)
-    private List<Effect> effects;        // 拥有特效列表 (Effects List)
     private Vector2 velocity;            // 速度 (Velocity)
     private Vector2 acceleration;        // 加速度 (Acceleration)
-    private Vector2 baseposition;        // 基准位置 (Base Position)
+    private Vector2 basePosition;        // 基准位置 (Base Position)
 
-    private Health health;               // 血量 (Health)
-    private Energy energy;               // 能量 (Energy)
-    private List<Skill> skills;          // 技能列表 (Skills List)
-    private CharacterMode mode;          // 角色模式 (Character Mode)       //
-    private List<BodyPart> bodyParts;    // 身体部件列表 (Body Parts List)
-
-    private List<CharacterBehaviorEvent> behaviorEvents; // 当前帧触发的行为事件列表
+    private int health;               // 血量 (Health)
+    private int energy;               // 能量 (Energy)
+    private Orientation orientation;
+    private Map<CharacterBehavior, Float> behaviors; // 当前帧触发的行为事件列表
     private int remainingAirJumps;   // 当前腾空跳跃剩余次数
-    private Facing facing; 
+    private int remainingDashes;      // 当前冲刺剩余次数
+    private Rect boundingBox; // 角色的边界框，用于碰撞检测等
 
     public Character() {
-        this.effects = new ArrayList<>();
         this.velocity = new Vector2();
         this.acceleration = new Vector2();
-        this.baseposition = new Vector2();
-        this.mode = CharacterMode.STANDING;
-        this.behaviorEvents = new ArrayList<>();
-        this.remainingAirJumps = 2; 
-        this.facing = Facing.RIGHT; // 默认朝向为右
-        this.bodyParts = new ArrayList<>();
-        this.bodyParts.add(new Hair());
-        this.bodyParts.add(new Face());
-        this.bodyParts.add(new Body());
-        this.bodyParts.add(new Hand()); // Left Hand
-        this.bodyParts.add(new Hand()); // Right Hand
-        this.bodyParts.add(new Leg());  // Left Leg
-        this.bodyParts.add(new Leg());  // Right Leg
-        this.bodyParts.add(new Foot()); // Left Foot
-        this.bodyParts.add(new Foot()); // Right Foot
-    }
-
-    public List<BodyPart> getBodyParts() {
-        return bodyParts;
+        this.basePosition = new Vector2();
+        this.orientation= Orientation.RIGHT;
+        this.behaviors = new HashMap<>();
+        this.behaviors.put(CharacterBehavior.STAND, 0.0f);
+        this.remainingAirJumps = CharacterConfig.MAX_AIR_JUMPS; 
+        this.remainingDashes = CharacterConfig.MAX_DASHES;
+        this.boundingBox = new Rect(0, 0, CharacterConfig.DEFAULT_WIDTH, CharacterConfig.DEFAULT_HEIGHT); // 设置默认包围盒大小
+        
+        // 初始化血量和能量
+        this.health = CharacterConfig.MAX_HEALTH;
+        this.energy = 0;
     }
 
     /**
      * 对外可见的角色模式枚举（用于渲染与逻辑判断）
      */
-    public enum CharacterMode {
-        STANDING, // 站立
-        WALKING,  // 行走
-        DASHING,  // 冲刺
-        HEALING,  // 治疗
-        ATTACK    // 攻击
+    public enum CharacterBehavior {//每一轮的最后根据情况添加几个初始behavior用于阻塞或其它
+        STAND,
+        WALK,
+        JUMP,
+        FALL,
+        DASH,
+        ATTACK_NORMAL,
+        ATTACK_UP,
+        ATTACK_DOWN,
+        CAST_SKILL, // 短按Q释放技能
+        HEAL,       // 长按Q回血，但是先实现不论长短都视为释放技能
+        HURT
     }
 
-    public enum Facing {
+    public enum Orientation {
         LEFT,
         RIGHT
     }
-    
-    public CharacterMode getMode() {
-        return mode;
-    }
 
-    public void setMode(CharacterMode mode) {
-        this.mode = mode;
-    }
-    
-    @Override
-    public void update(float deltaTime) {
-        
-    }
-
-    @Override
-    public void render() {
-        for(BodyPart part : bodyParts) {
-            PixelMap pixels = part.getPixels(mode);
-            Renderer.renderPixelMap(pixels, baseposition);
+    public void updateRemainingTime(float deltaTime, CharacterBehavior behavior) {
+        float remainingTime = behaviors.get(behavior) - deltaTime;
+        if (remainingTime <= 0) {
+            behaviors.remove(behavior);
+        } else {
+            behaviors.put(behavior, remainingTime);
         }
     }
 
-    public List<CharacterBehaviorEvent> getBehaviorEvents() {
-        return behaviorEvents;
+    @Override
+    public void update(float deltaTime, GameScene scene) {//此时hasBehavior无冲突且合理地包含了当前所有行为
+        // 1. 根据 behaviors 更新状态 (速度/加速度)
+        if(hasBehavior(CharacterBehavior.STAND)){
+            velocity.set(0,0);
+            acceleration.set(0,0);
+            updateRemainingTime(deltaTime, CharacterBehavior.STAND);
+        }
+
+        if(hasBehavior(CharacterBehavior.WALK)){
+            velocity.setX((orientation == Orientation.RIGHT) ? CharacterConfig.MOVE_SPEED : -CharacterConfig.MOVE_SPEED);
+            acceleration.setX(0);
+        }
+        
+        if(hasBehavior(CharacterBehavior.DASH)){
+            velocity.set((orientation == Orientation.RIGHT) ? CharacterConfig.DASH_SPEED : -CharacterConfig.DASH_SPEED, 0);
+            acceleration.set(0,0);
+            remainingDashes--;
+            updateRemainingTime(deltaTime, CharacterBehavior.DASH);
+        }
+
+        // 处理跳跃 (瞬时速度)
+        if (hasBehavior(CharacterBehavior.JUMP)) {
+            velocity.setY(CharacterConfig.JUMP_VELOCITY);
+            acceleration.setY(CharacterConfig.GRAVITY);
+            remainingAirJumps--;
+        }
+
+        if(hasBehavior(CharacterBehavior.CAST_SKILL)){
+            velocity.set(0,0);
+            acceleration.set(0,0);
+            updateRemainingTime(deltaTime, CharacterBehavior.CAST_SKILL);
+            consumeEnergy(PurpleDragonConfig.ENERGY_COST);
+        }
+
+        if(hasBehavior(CharacterBehavior.HURT)){
+            updateRemainingTime(deltaTime, CharacterBehavior.HURT);
+        }
+
+        // 物理计算
+        PhysicsUtils.updatePhysicsState(basePosition, velocity, acceleration, deltaTime);
+        
+        // 同步判定箱
+        boundingBox.setPosition(basePosition.x, basePosition.y);
     }
 
-    public void setBehaviorEvents(List<CharacterBehaviorEvent> behaviorEvents) {
-        this.behaviorEvents = behaviorEvents;
+    public void clearBehaviors() {
+        behaviors.clear();
     }
 
-    public boolean isOnGround(){
-        return baseposition.y <= 0;//to do 
+    public Rect getBoundingBox() {
+        return boundingBox;
+    }
+    
+    public Map<CharacterBehavior, Float> getBehaviors() {
+        return behaviors;
+    }
+
+    public void addBehavior(CharacterBehavior behavior){
+        this.behaviors.put(behavior, CharacterConfig.getBlockingDuration(behavior));
+    }
+
+    public boolean hasBehavior(CharacterBehavior characterBehavior){
+        return behaviors.containsKey(characterBehavior);
+    }
+    public void setBehaviors(Map<CharacterBehavior, Float> behaviors) {
+        this.behaviors = behaviors;
+    }
+
+    public void setOrientation(Orientation orientation){
+        this.orientation = orientation;
+    }
+
+    public Orientation getOrientation(){
+        return orientation;
     }
 
     public int getRemainingAirJumps() {
@@ -128,12 +166,56 @@ public class Character extends GameObject {
         this.remainingAirJumps = remainingAirJumps;
     }
 
-    public Facing getFacing() {
-        return facing;
+    public int getRemainingDashes() {
+        return remainingDashes;
     }
 
-    public void setFacing(Facing facing) {
-        this.facing = facing;
+    public void setRemainingDashes(int remainingDashes) {
+        this.remainingDashes = remainingDashes;
     }
 
+    // --- 血量与能量接口 ---
+
+    public int getCurrentHealth() {
+        return health;
+    }
+
+    public void takeDamage(int amount) {
+        health -= amount;
+        if (health <= 0) {
+            health = 0;
+            isAlive = false;
+            // 可以在这里添加死亡逻辑
+        }
+    }
+
+    public void heal(int amount) {
+        health += amount;
+        if (health > CharacterConfig.MAX_HEALTH) {
+            health = CharacterConfig.MAX_HEALTH;
+        }
+    }
+
+    public int getCurrentEnergy() {
+        return energy;
+    }
+
+    public void consumeEnergy(int amount) {
+        energy -= amount;
+    }
+
+    public void restoreEnergy(int amount) {
+        energy += amount;
+        if (energy > CharacterConfig.MAX_ENERGY) {
+            energy = CharacterConfig.MAX_ENERGY;
+        }
+    }
+
+    public Vector2 getPosition() {
+        return basePosition;
+    }
+
+    public Vector2 getVelocity() {
+        return velocity;
+    }
 }

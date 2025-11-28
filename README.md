@@ -25,4 +25,12 @@ w+j  s+j 分别是上批和下批
 给characterMode增加攻击这一模式修改与之相关的文件，其它都不变
 先取出events里决定人物朝向的事件更改，再取出决定charactermode的事件更改，再取出与特效相关的事件进行对应逻辑。只改processinput方法
 
+每一帧之后检查逻辑：给skill,character,tarrain对象添加一个判定范围，矩形
+对于character检查和这几种对象是否在判定范围上相交，如果相交触发逻辑（逻辑具体怎么样不要写）
+
+请你帮我实现handlecollisions和boundarychecks的伪代码,如果你觉得characterbehaviorevent和charactermode的设置有些不妥或者冗余确实，并请修改与这些相关联的地方，其它都不要改
+
+更行逻辑
+character 在render的时候，
+
 待定：onground判断，长按回血逻辑

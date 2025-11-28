@@ -3,7 +3,7 @@ package com.example.rendering;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.system.MemoryUtil;
 
-import com.example.gameobjects.character.bodyparts.PixelMap;
+import com.example.gameobjects.GameObject;
 import com.example.math.Vector2;
 import com.example.scene.GameScene;
 
@@ -19,15 +19,14 @@ public class Renderer {
 
     public Renderer(GameScene scene){
         this.scene = scene;
-        windowHandle = GLFW.glfwCreateWindow(800, 600, "Journey Demo", MemoryUtil.NULL, MemoryUtil.NULL);
-    }
-
-    public static void renderPixelMap(PixelMap pixels, Vector2 baseposition) {
-        // TODO: 在指定位置绘制像素图
+        windowHandle = GLFW.glfwCreateWindow((int)scene.SCREEN_WIDTH, (int)scene.SCREEN_HEIGHT, "Journey Demo", MemoryUtil.NULL, MemoryUtil.NULL);
     }
 
     public void render(){
-        scene.render();
+
+        for (GameObject obj : scene.getGameObjects()) {
+            
+        }
     }
 
     public GameScene getScene() {

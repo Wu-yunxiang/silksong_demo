@@ -17,9 +17,11 @@ import org.lwjgl.glfw.GLFW;
 
 public class InputManager {
     private static InputManager instance;//所有inputmanager实例的共有指针
+    private final float longPressThreshold = 0.2f; // 长按判定阈值，单位秒
     private Set<Integer> pressedKeys;
     private Set<Integer> justPressedKeys;
     private Map<Integer, Boolean> keyStates;
+    private Map<Integer, Float> keyHoldDurations;
     private Vector2 mousePosition;
     private boolean[] mouseButtons;
     private boolean[] mouseButtonsJustPressed;
@@ -28,6 +30,7 @@ public class InputManager {
         pressedKeys = new HashSet<>();
         justPressedKeys = new HashSet<>();
         keyStates = new HashMap<>();
+        keyHoldDurations = new HashMap<>();
         mousePosition = new Vector2();
         mouseButtons = new boolean[3];
         mouseButtonsJustPressed = new boolean[3];
@@ -40,10 +43,14 @@ public class InputManager {
         return instance;
     }
     
-    public void update() {
+    public void update(float deltaTime) {
         justPressedKeys.clear();
         for (int i = 0; i < mouseButtonsJustPressed.length; i++) {
             mouseButtonsJustPressed[i] = false;
+        }
+        // Update key hold durations
+        for (Integer key : pressedKeys) {
+            keyHoldDurations.put(key, keyHoldDurations.get(key) + deltaTime);
         }
     }
     
@@ -54,6 +61,7 @@ public class InputManager {
     public void onKeyPressed(int keyCode) {
         if (!pressedKeys.contains(keyCode)) {
             justPressedKeys.add(keyCode);
+            keyHoldDurations.put(keyCode, 0.0f);
         }
         pressedKeys.add(keyCode);
         keyStates.put(keyCode, true);
@@ -62,6 +70,7 @@ public class InputManager {
     public void onKeyReleased(int keyCode) {
         pressedKeys.remove(keyCode);
         keyStates.put(keyCode, false);
+        keyHoldDurations.remove(keyCode);
     }
     
     public void onMouseMoved(float x, float y) {
@@ -114,6 +123,10 @@ public class InputManager {
         return !pressedKeys.isEmpty();
     }
 
+    public float getKeyHoldDuration(int keyCode) {
+        return keyHoldDurations.getOrDefault(keyCode, 0.0f);
+    }
+
     public java.util.Set<Integer> getJustPressedKeysSnapshot() {
         return new java.util.HashSet<>(justPressedKeys);
     }
@@ -128,5 +141,9 @@ public class InputManager {
     
     public float getMouseY() {
         return mousePosition.y;
+    }
+    
+    public float getLongPressThreshold() {
+        return longPressThreshold;
     }
 }

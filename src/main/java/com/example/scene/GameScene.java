@@ -15,18 +15,12 @@ import java.util.ArrayList;
  */
 public class GameScene {
     //背景对象
+    public final float SCREEN_WIDTH = 800;
+    public final float SCREEN_HEIGHT = 600;
+    public final float GROUND_Y = 50;
     private List<GameObject> gameObjects;
     public GameScene() {
         gameObjects = new ArrayList<>();
-    }
-    public void render() {
-        //render 背景
-        for (GameObject obj : gameObjects) {
-            if(obj.isRendered){
-                continue;
-            }
-            obj.render();
-        }
     }
 
     public Character getMainCharacter() {
