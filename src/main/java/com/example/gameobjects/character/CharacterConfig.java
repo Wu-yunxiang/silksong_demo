@@ -52,10 +52,17 @@ public class CharacterConfig {
     public static final float DURATION_SKILL = 0.5f;
     public static final float DURATION_DASH = 0.2f;
     public static final float DURATION_HURT = 0.3f;
+    public static final float DURATION_HEAL = 1.0f;
     public static final float DURATION_NONE = 0.0f;
+
+    // 技能与回血消耗
+    public static final int HEAL_COST = 3;
+    public static final int HEAL_AMOUNT = 1;
 
     //冲刺冷却时间 (秒)
     public static final float DASH_COOLDOWN = 1.0f;
+
+    public static final float IMMUNITY_DURATION = 1.0f; // 受伤后免疫时间 (秒)
 
     /**
      * 获取指定行为的阻塞时间
@@ -70,6 +77,8 @@ public class CharacterConfig {
                 return DURATION_ATTACK;
             case CAST_SKILL:
                 return DURATION_SKILL;
+            case HEAL:
+                return DURATION_HEAL;
             case DASH:
                 return DURATION_DASH;
             case HURT:

@@ -3,7 +3,7 @@ package com.example.core;
 import com.example.input.InputManager;
 import com.example.gameobjects.character.Character;
 import com.example.gameobjects.character.Character.CharacterBehavior;
-import com.example.gameobjects.skill.PurpleGragon;
+import com.example.gameobjects.skill.PurpleDragon;
 import com.example.gameobjects.terrain.Terrain;
 import com.example.math.Rect;
 import com.example.scene.GameScene;
@@ -12,7 +12,6 @@ import com.example.gameobjects.skill.PurpleDragonConfig;
 import com.example.gameobjects.character.CharacterConfig;
 import com.example.gameobjects.character.Character.Orientation;
 import com.example.math.Vector2;
-import com.example.math.Rect;
 import org.lwjgl.glfw.GLFW;
 import java.util.Map;
 
@@ -25,57 +24,69 @@ public class GameLogic {
     public static void processFrame(float deltaTime, GameScene scene) {
         // 处理输入
         processInput(deltaTime, scene);
-        InputManager.getInstance().update(deltaTime);
+        InputManager.getInstance().update();
         // 更新游戏逻辑
         updateGameLogic(deltaTime, scene);
 
         // 检查游戏判定
-        checkGameConditions(scene);
+        checkGameConditions(scene);    
     }
+
     private static void processInput(float deltaTime, GameScene scene) {
         Character character = scene.getMainCharacter();
         InputManager input = InputManager.getInstance();
         input.pollEvents();
+
         Map<CharacterBehavior, Float> behaviors = character.getBehaviors();
         //是否有阻塞
-        for(Float value : behaviors.values()){
-            if(value > 0){
+        for(CharacterBehavior behavior : behaviors.keySet()){
+            if(CharacterConfig.getBlockingDuration(behavior) > 0){
                 return;//键盘输入的行为均阻塞，hurt并非键盘输入行为故不在此处处理
             }
         }
 
-        // 首先处理决定方向的点按AD
-        if(input.isKeyJustPressed(GLFW.GLFW_KEY_A)) {
-            character.setOrientation(Orientation.LEFT);
-        }
+        // 首先确定这一帧的方向
+        if(input.isKeyJustPressed(GLFW.GLFW_KEY_A)||input.isKeyJustPressed(GLFW.GLFW_KEY_D)) {
+            if(input.isKeyJustPressed(GLFW.GLFW_KEY_A) && character.getOrientation() != Orientation.LEFT){
+                character.setOrientation(Orientation.LEFT);
+            } else if(input.isKeyJustPressed(GLFW.GLFW_KEY_D) && character.getOrientation() != Orientation.RIGHT){
+                character.setOrientation(Orientation.RIGHT);
+            }
+        }// 如果刚刚有按下A或D键（如果存在和原方向不同的，改成为和原方向不同的方向)
 
-        if(input.isKeyJustPressed(GLFW.GLFW_KEY_D)) {
-            character.setOrientation(Orientation.RIGHT);
-        }
-        //处理长按AD
-        boolean isWalk = false;
-        if(input.getKeyHoldDuration(GLFW.GLFW_KEY_A)>= input.getLongPressThreshold()) {
-            isWalk = true;
-        }
+        else{
+            if(input.isKeyPressed(GLFW.GLFW_KEY_A)||input.isKeyPressed(GLFW.GLFW_KEY_D)) {
+                if(input.isKeyPressed(GLFW.GLFW_KEY_A) && input.isKeyPressed(GLFW.GLFW_KEY_D)){
+                    //同时按下不改变方向
+                } else if(input.isKeyPressed(GLFW.GLFW_KEY_A)){
+                    character.setOrientation(Orientation.LEFT);
+                } else if(input.isKeyPressed(GLFW.GLFW_KEY_D)){
+                    character.setOrientation(Orientation.RIGHT);
+                }
+            }
+        }//如果刚刚没有按下方向键
 
-        if(input.getKeyHoldDuration(GLFW.GLFW_KEY_D)>= input.getLongPressThreshold()) {
-            isWalk = true;
-        }
-
-        if (isWalk) {
-            character.addBehavior(CharacterBehavior.WALK);
-        }
         // 优先级 1: 技能 (Q)
         if (input.isKeyJustPressed(GLFW.GLFW_KEY_Q)) {
             if(character.getCurrentEnergy() >= PurpleDragonConfig.ENERGY_COST){//能量充足
                 character.addBehavior(CharacterBehavior.CAST_SKILL);
+                character.consumeEnergy(PurpleDragonConfig.ENERGY_COST);
+                return;
+            }
+        }
+
+        // 优先级 1.5: 回血 (H)
+        if (input.isKeyJustPressed(GLFW.GLFW_KEY_H)||input.isKeyPressed(GLFW.GLFW_KEY_H)) {
+            if(character.getCurrentEnergy() >= CharacterConfig.HEAL_COST && character.isOnGround()){//能量充足且在地面
+                character.addBehavior(CharacterBehavior.HEAL);
+                character.consumeEnergy(CharacterConfig.HEAL_COST);
                 return;
             }
         }
 
         // 优先级 2: 冲刺 (L)
         if (input.isKeyJustPressed(GLFW.GLFW_KEY_L)) {
-            if(character.getRemainingDashes() > 0){
+            if(character.getRemainingDashes() > 0 && character.getDashCooldown() <= 0){
                 character.addBehavior(CharacterBehavior.DASH);
                 return;
             }
@@ -85,7 +96,7 @@ public class GameLogic {
         if (input.isKeyJustPressed(GLFW.GLFW_KEY_J)) {
             if (input.isKeyPressed(GLFW.GLFW_KEY_S)) {
                 //如果人物处于腾空状态则执行下斩
-                if(character.getPosition().y > scene.GROUND_Y) {
+                if(!character.isOnGround()) {
                     character.addBehavior(CharacterBehavior.ATTACK_DOWN);
                     return;
                 }
@@ -96,80 +107,58 @@ public class GameLogic {
             } else {
                 character.addBehavior(CharacterBehavior.ATTACK_NORMAL);
             }
-            return;
         }
 
         // 优先级 4: 跳跃 (K)
         if (input.isKeyJustPressed(GLFW.GLFW_KEY_K)) {
             if (character.getRemainingAirJumps() > 0) {
                 character.addBehavior(CharacterBehavior.JUMP);
-                return;
+            }
+        }
+
+        // walk 和 stand的处理放在最后
+        if(input.isKeyPressed(GLFW.GLFW_KEY_A)||input.isKeyPressed(GLFW.GLFW_KEY_D)){
+            character.addBehavior(CharacterBehavior.WALK);
+        } else{
+            if(character.isOnGround() && character.getBehaviors().isEmpty()){
+                character.addBehavior(CharacterBehavior.STAND);
             }
         }
 
     }
     
     private static void updateGameLogic(float deltaTime, GameScene scene) {
-        for(GameObject obj : scene.getGameObjects()) {
+        for (GameObject obj : scene.getGameObjects()) {
             obj.update(deltaTime, scene);
-        }
+        } //只有人物和龙update不为空，相当于更新人物和屏幕里的所有龙 
     }
 
     private static void checkGameConditions(GameScene scene) {
         Character character = scene.getMainCharacter();
+        boundaryChecks(character, scene);// 合理化了更新之后的状态
         handleCollisions(character, scene);
-        boundaryChecks(character, scene);
     }
 
     private static void handleCollisions(Character character, GameScene scene) {
-        Rect charBox = character.getBoundingBox();
-        
-        // 计算攻击判定框 (Attack Bounding Boxes)
-        Rect attackUpBox = new Rect(
-            charBox.x + CharacterConfig.ATTACK_UP_OFFSET_X,
-            charBox.y + CharacterConfig.ATTACK_UP_OFFSET_Y,
-            charBox.width + CharacterConfig.ATTACK_UP_OFFSET_WIDTH,
-            charBox.height + CharacterConfig.ATTACK_UP_OFFSET_HEIGHT
-        );
-
-        Rect attackDownBox = new Rect(
-            charBox.x + CharacterConfig.ATTACK_DOWN_OFFSET_X,
-            charBox.y + CharacterConfig.ATTACK_DOWN_OFFSET_Y,
-            charBox.width + CharacterConfig.ATTACK_DOWN_OFFSET_WIDTH,
-            charBox.height + CharacterConfig.ATTACK_DOWN_OFFSET_HEIGHT
-        );
-
-        Rect attackLeftBox = new Rect(
-            charBox.x + CharacterConfig.ATTACK_LEFT_OFFSET_X,
-            charBox.y + CharacterConfig.ATTACK_LEFT_OFFSET_Y,
-            charBox.width + CharacterConfig.ATTACK_LEFT_OFFSET_WIDTH,
-            charBox.height + CharacterConfig.ATTACK_LEFT_OFFSET_HEIGHT
-        );
-
-        Rect attackRightBox = new Rect(
-            charBox.x + CharacterConfig.ATTACK_RIGHT_OFFSET_X,
-            charBox.y + CharacterConfig.ATTACK_RIGHT_OFFSET_Y,
-            charBox.width + CharacterConfig.ATTACK_RIGHT_OFFSET_WIDTH,
-            charBox.height + CharacterConfig.ATTACK_RIGHT_OFFSET_HEIGHT
-        );
+        Rect characterHitBox = character.getHitBox();
+        Rect characterAttackBox = character.getAttackBox();
         
         for (GameObject obj : scene.getGameObjects()) {
             if (obj == character) continue; // Skip self
-            if(obj instanceof Terrain){
+            if (obj instanceof Terrain){
                 Terrain terrain = (Terrain) obj;
-                boolean hurted = false;
+                boolean hit = false;
                 boolean hitTrap = false;
                 for(Rect trapBoundingBox : terrain.getTrapBoundingBoxes()){
 
-                    if(!hurted && character.getBoundingBox().intersects(trapBoundingBox)){
-                        character.clearBehaviors();
+                    if(!hit && !character.isImmune() && characterHitBox.intersects(trapBoundingBox)){
+                        hit = true;
                         character.addBehavior(CharacterBehavior.HURT);
-                        hurted = true;
                     }
 
-                    if(!hitTrap && character.hasBehavior(CharacterBehavior.ATTACK_DOWN)){//可能update前设置为下批，但是现在已经没资格下批了
-                        if (attackDownBox.intersects(trapBoundingBox)) {
-                            character.getVelocity().y = CharacterConfig.JUMP_VELOCITY / 2;
+                    if(!hitTrap && character.hasBehavior(CharacterBehavior.ATTACK_DOWN)){
+                        if (characterAttackBox.intersects(trapBoundingBox)) {
+                            character.getVelocity().setY(CharacterConfig.JUMP_VELOCITY * 0.8f);
                             character.setRemainingAirJumps(1);
                             character.setRemainingDashes(1);
                             hitTrap = true;
@@ -178,11 +167,11 @@ public class GameLogic {
                 }
             }
 
-            if(obj instanceof PurpleGragon){
-                PurpleGragon purpleGragon = (PurpleGragon) obj;
+            if(obj instanceof PurpleDragon){
+                PurpleDragon purpleDragon = (PurpleDragon) obj;
                 if(character.hasBehavior(CharacterBehavior.ATTACK_DOWN)){
-                    if (attackDownBox.intersects(purpleGragon.getBoundingBox())) {
-                        character.getVelocity().y = CharacterConfig.JUMP_VELOCITY / 2;
+                    if (characterAttackBox.intersects(purpleDragon.getBoundingBox())) {
+                        character.getVelocity().setY(CharacterConfig.JUMP_VELOCITY * 0.8f);
                         character.setRemainingAirJumps(1);
                         character.setRemainingDashes(1);
                     }
@@ -192,24 +181,23 @@ public class GameLogic {
     }
 
     private static void boundaryChecks(Character character, GameScene scene) {
-        Rect boundingbox = character.getBoundingBox();
+        Rect characterHitBox = character.getHitBox();
         Vector2 pos = character.getPosition();
         Vector2 vel = character.getVelocity();
-
+        // 下面if里的条件都不一定正确，到时候修改
         // 左边界
-        if (pos.x < 0) {
-            pos.x = 0;
-            vel.x = 0;
+        if(characterHitBox.x < 0){
+            //修改pos的x值把受击框移到边界上
+            //把x方向速度改为0
         }
         // 右边界
-        if (pos.x + boundingbox.width > scene.SCREEN_WIDTH) {
-            pos.x = scene.SCREEN_WIDTH - boundingbox.width;
-            vel.x = 0;
+        if (pos.x + characterHitBox.width > scene.SCREEN_WIDTH) {
+            //同上
         }
         // 上边界
-        if (pos.y + boundingbox.height > scene.SCREEN_HEIGHT) {
-            pos.y = scene.SCREEN_HEIGHT - boundingbox.height;
-            vel.y = 0;
+        if (pos.y + characterHitBox.height > scene.SCREEN_HEIGHT) {
+            //修改pos的y值把受击框移到边界上
+            //把y方向速度改为0，加速度改为重力
         }
         // 下边界 (Ground)
         if (pos.y < scene.GROUND_Y) {

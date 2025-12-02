@@ -4,6 +4,7 @@ import org.lwjgl.glfw.GLFW;
 
 import com.example.input.InputManager;
 import com.example.rendering.Renderer;
+import com.example.scene.GameScene;
 import com.example.gameobjects.character.Character;
 
 /**
@@ -25,7 +26,8 @@ public class GameEngine {
         this.windowHandle = renderer.getWindowHandle();
         this.inputManager = InputManager.getInstance();
         this.isRunning = true;
-        renderer.getScene().getGameObjects().add(new Character());
+        GameScene scene = renderer.getScene();
+        scene.getGameObjects().add(new Character(scene));
         setupInput();
     }
 

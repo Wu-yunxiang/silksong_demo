@@ -36,7 +36,7 @@ public class Renderer {
     public void setScene(GameScene scene) {
         this.scene = scene;
     }
-
+    
     public long getWindowHandle() {
         return windowHandle;
     }

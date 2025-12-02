@@ -32,6 +32,10 @@ public class GameScene {
         return null;
     }
 
+    public void handleCharacterDeath(Character character) {
+        gameObjects.remove(character);
+    }
+
     public void addGameObject(GameObject obj) {
         gameObjects.add(obj);
     }

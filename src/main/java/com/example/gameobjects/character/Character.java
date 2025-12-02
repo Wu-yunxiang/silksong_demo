@@ -1,11 +1,12 @@
 package com.example.gameobjects.character;
 
+import com.example.Game;
 import com.example.gameobjects.GameObject;
 import com.example.math.PhysicsUtils;
 import com.example.math.Rect;
 import com.example.math.Vector2;
 import com.example.scene.GameScene;
-import com.example.gameobjects.skill.PurpleDragonConfig;
+import com.example.gameobjects.skill.PurpleDragon;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -18,8 +19,7 @@ import java.util.Map;
  */
 public class Character extends GameObject {
     // 基础字段
-    private boolean isAlive = true;      // 存活状态 (Is Alive)
-    private float modeDuration;          // mode持续时间 (Mode Duration)
+    private boolean isAlive;            // 是否存活 (Is Alive)
     private boolean isImmune;            // 是否处于免疫状态 (Is Immune)
     private float immunityTime;          // 免疫时间 (Immunity Time)
     private Vector2 velocity;            // 速度 (Velocity)
@@ -32,22 +32,25 @@ public class Character extends GameObject {
     private Map<CharacterBehavior, Float> behaviors; // 当前帧触发的行为事件列表
     private int remainingAirJumps;   // 当前腾空跳跃剩余次数
     private int remainingDashes;      // 当前冲刺剩余次数
-    private Rect boundingBox; // 角色的边界框，用于碰撞检测等
+    private float remainingDashCooldown; // 冲刺剩余冷却时间
+    private Rect attackBox;          // 攻击判定箱
+    private Rect hitBox;             // 受击判定箱
+    private GameScene scene;
 
-    public Character() {
+    public Character(GameScene scene) {
+        this.scene = scene;
         this.velocity = new Vector2();
         this.acceleration = new Vector2();
         this.basePosition = new Vector2();
         this.orientation= Orientation.RIGHT;
         this.behaviors = new HashMap<>();
-        this.behaviors.put(CharacterBehavior.STAND, 0.0f);
+        this.addBehavior(CharacterBehavior.STAND);
+        this.isAlive = true;
         this.remainingAirJumps = CharacterConfig.MAX_AIR_JUMPS; 
         this.remainingDashes = CharacterConfig.MAX_DASHES;
-        this.boundingBox = new Rect(0, 0, CharacterConfig.DEFAULT_WIDTH, CharacterConfig.DEFAULT_HEIGHT); // 设置默认包围盒大小
-        
-        // 初始化血量和能量
+        //attackBox和hitBox的初始化留待后续根据贴图和需求实现 
         this.health = CharacterConfig.MAX_HEALTH;
-        this.energy = 0;
+        this.energy = 0;// 初始化血量和能量
     }
 
     /**
@@ -57,13 +60,12 @@ public class Character extends GameObject {
         STAND,
         WALK,
         JUMP,
-        FALL,
         DASH,
         ATTACK_NORMAL,
         ATTACK_UP,
         ATTACK_DOWN,
         CAST_SKILL, // 短按Q释放技能
-        HEAL,       // 长按Q回血，但是先实现不论长短都视为释放技能
+        HEAL,       // 按H回血
         HURT
     }
 
@@ -73,74 +75,167 @@ public class Character extends GameObject {
     }
 
     public void updateRemainingTime(float deltaTime, CharacterBehavior behavior) {
+        if(CharacterConfig.getBlockingDuration(behavior) == CharacterConfig.DURATION_NONE){
+            return;
+        }
         float remainingTime = behaviors.get(behavior) - deltaTime;
         if (remainingTime <= 0) {
-            behaviors.remove(behavior);
+            behaviors.put(behavior, remainingTime);
+            removeBehavior(behavior);
         } else {
             behaviors.put(behavior, remainingTime);
         }
     }
 
     @Override
-    public void update(float deltaTime, GameScene scene) {//此时hasBehavior无冲突且合理地包含了当前所有行为
-        // 1. 根据 behaviors 更新状态 (速度/加速度)
-        if(hasBehavior(CharacterBehavior.STAND)){
-            velocity.set(0,0);
-            acceleration.set(0,0);
-            updateRemainingTime(deltaTime, CharacterBehavior.STAND);
-        }
+    public void update(float deltaTime, GameScene scene) {//每帧update前设置behaviors，update结束后清除walk。此时hasBehavior无冲突且合理地包含了当前所有行为，jump和walk、dash、cast_skill、hurt不互斥，其余behavior均互斥
+        if(isImmune){
+            immunityTime -= deltaTime;
+            if(immunityTime <= 0){
+                isImmune = false;
+            }
+        }//更新免疫状态
 
-        if(hasBehavior(CharacterBehavior.WALK)){
-            velocity.setX((orientation == Orientation.RIGHT) ? CharacterConfig.MOVE_SPEED : -CharacterConfig.MOVE_SPEED);
-            acceleration.setX(0);
-        }
-        
-        if(hasBehavior(CharacterBehavior.DASH)){
-            velocity.set((orientation == Orientation.RIGHT) ? CharacterConfig.DASH_SPEED : -CharacterConfig.DASH_SPEED, 0);
-            acceleration.set(0,0);
-            remainingDashes--;
-            updateRemainingTime(deltaTime, CharacterBehavior.DASH);
-        }
-
-        // 处理跳跃 (瞬时速度)
-        if (hasBehavior(CharacterBehavior.JUMP)) {
-            velocity.setY(CharacterConfig.JUMP_VELOCITY);
-            acceleration.setY(CharacterConfig.GRAVITY);
-            remainingAirJumps--;
-        }
-
-        if(hasBehavior(CharacterBehavior.CAST_SKILL)){
-            velocity.set(0,0);
-            acceleration.set(0,0);
-            updateRemainingTime(deltaTime, CharacterBehavior.CAST_SKILL);
-            consumeEnergy(PurpleDragonConfig.ENERGY_COST);
-        }
-
-        if(hasBehavior(CharacterBehavior.HURT)){
-            updateRemainingTime(deltaTime, CharacterBehavior.HURT);
-        }
+        if(remainingDashCooldown > 0){
+            remainingDashCooldown -= deltaTime;
+            if(remainingDashCooldown < 0){
+                remainingDashCooldown = 0;
+            }   
+        }//更新冲刺冷却时间
 
         // 物理计算
         PhysicsUtils.updatePhysicsState(basePosition, velocity, acceleration, deltaTime);
-        
         // 同步判定箱
-        boundingBox.setPosition(basePosition.x, basePosition.y);
+        hitBox.setPosition(basePosition.x, basePosition.y);
+        attackBox.setPosition(basePosition.x, basePosition.y);
+
+        for(Map.Entry<CharacterBehavior, Float> entry : behaviors.entrySet()){
+            CharacterBehavior behavior = entry.getKey();
+            updateRemainingTime(deltaTime, behavior);
+        }//去除掉已经结束的behavior，或更新剩余时间
+
     }
 
     public void clearBehaviors() {
-        behaviors.clear();
+        for(CharacterBehavior behavior : behaviors.keySet()){
+            if(behavior == CharacterBehavior.JUMP){
+                continue;
+            }
+            removeBehavior(behavior);
+        }
     }
 
-    public Rect getBoundingBox() {
-        return boundingBox;
+    public void removeBehavior(CharacterBehavior behavior){
+        if(isOnGround()){
+            acceleration.set(0,0);
+        } else{
+            acceleration.set(0,CharacterConfig.GRAVITY);
+        }
+
+        if(behavior == CharacterBehavior.HEAL && behaviors.get(behavior) <= 0 ){
+            heal(CharacterConfig.HEAL_AMOUNT);
+        }
+
+        if(behavior == CharacterBehavior.CAST_SKILL && behaviors.get(behavior) <= 0 ){
+            scene.addGameObject(new PurpleDragon(basePosition));
+        }
+
+        if(behavior == CharacterBehavior.WALK){
+            velocity.setX(0);
+        }
+
+        if(!isAttack(behavior) && CharacterConfig.getBlockingDuration(behavior) != CharacterConfig.DURATION_NONE){
+            velocity.set(0,0);
+        }
+
+        if(behavior == CharacterBehavior.DASH){
+            remainingDashCooldown = CharacterConfig.DASH_COOLDOWN;
+        }
+
+        this.behaviors.remove(behavior);
+    }
+
+    public Rect getHitBox() {
+        return hitBox;//没那么简单，等引入插入再修改
+    }
+
+    public Rect getAttackBox() {
+        return attackBox;
     }
     
     public Map<CharacterBehavior, Float> getBehaviors() {
         return behaviors;
     }
 
+    public boolean isFalling() {
+        return true;//暂时先这样写，后续根据碰撞检测结果实现
+    }
+
+    public boolean isAttack(CharacterBehavior behavior){
+        return behavior == CharacterBehavior.ATTACK_NORMAL || behavior == CharacterBehavior.ATTACK_UP || behavior == CharacterBehavior.ATTACK_DOWN;
+    }
+
+    public boolean hasAttackBehavior(){
+        return hasBehavior(CharacterBehavior.ATTACK_NORMAL) ||
+               hasBehavior(CharacterBehavior.ATTACK_UP) ||
+               hasBehavior(CharacterBehavior.ATTACK_DOWN);
+    }
+
     public void addBehavior(CharacterBehavior behavior){
+
+        if(behavior == CharacterBehavior.HURT){
+            clearBehaviors();
+        } else{
+            if(behavior != CharacterBehavior.STAND){
+                removeBehavior(CharacterBehavior.STAND);
+            }
+
+            if(CharacterConfig.getBlockingDuration(behavior) != CharacterConfig.DURATION_NONE){
+                if(!isAttack(behavior) && !hasAttackBehavior()){
+                    removeBehavior(CharacterBehavior.WALK);
+                }
+            }
+        }
+
         this.behaviors.put(behavior, CharacterConfig.getBlockingDuration(behavior));
+
+        switch (behavior) {
+            case WALK:
+                velocity.setX((orientation == Orientation.RIGHT) ? CharacterConfig.MOVE_SPEED : -CharacterConfig.MOVE_SPEED);
+                acceleration.setX(0);
+                break;
+            case JUMP:
+                velocity.setY(CharacterConfig.JUMP_VELOCITY);
+                acceleration.setY(CharacterConfig.GRAVITY);
+                remainingAirJumps--;
+                break;
+            case DASH:
+                velocity.set((orientation == Orientation.RIGHT) ? CharacterConfig.DASH_SPEED : -CharacterConfig.DASH_SPEED, 0);
+                acceleration.set(0,0);
+                remainingDashes--;
+                break;
+            case CAST_SKILL:
+            case HEAL:
+                velocity.set(0,0);
+                acceleration.set(0,0);
+                break;
+            case HURT:
+                velocity.set(0,0);
+                if(isOnGround()){
+                    acceleration.set(0,0);
+                } else{
+                    acceleration.set(0,CharacterConfig.GRAVITY);
+                }
+                takeDamage(1);
+                setImmune(true);
+                break;
+            case STAND:
+                velocity.set(0,0);
+                acceleration.set(0,0);
+                break;
+            default:
+                break;
+        }
     }
 
     public boolean hasBehavior(CharacterBehavior characterBehavior){
@@ -174,6 +269,29 @@ public class Character extends GameObject {
         this.remainingDashes = remainingDashes;
     }
 
+    public boolean isAlive() {
+        return isAlive;
+    }
+
+    public void setImmune(boolean immune) {
+        isImmune = immune;
+        if (immune) {
+            immunityTime = CharacterConfig.IMMUNITY_DURATION;
+        }
+    }
+
+    public boolean isImmune() {
+        return isImmune;
+    }
+
+    public boolean isOnGround() {
+        return true;//暂时先这样写，后续根据碰撞检测结果实现
+    }
+
+    public float getDashCooldown() {
+        return remainingDashCooldown;
+    }
+
     // --- 血量与能量接口 ---
 
     public int getCurrentHealth() {
@@ -185,7 +303,6 @@ public class Character extends GameObject {
         if (health <= 0) {
             health = 0;
             isAlive = false;
-            // 可以在这里添加死亡逻辑
         }
     }
 

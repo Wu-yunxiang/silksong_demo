@@ -9,15 +9,15 @@ import com.example.gameobjects.GameObject;
  * 黑波技能 (Black Wave Skill)
  * 说明：名称为 “黑波”，作为游戏中某个具体技能实体。
  */
-public class PurpleGragon extends GameObject {
+public class PurpleDragon extends GameObject {
     private Rect boundingBox;
     private float velocityX = PurpleDragonConfig.SPEED;            // 速度 (Velocity)
     private Vector2 basePosition;        // 基准位置 (贴图左下角坐标)
 
-    public PurpleGragon(Vector2 startPostition) {
-        this.boundingBox = new Rect(startPostition.x, startPostition.y,
+    public PurpleDragon(Vector2 ownerPostition) {
+        this.boundingBox = new Rect(ownerPostition.x, ownerPostition.y,
                 PurpleDragonConfig.WIDTH, PurpleDragonConfig.HEIGHT);
-        this.basePosition = startPostition;
+        this.basePosition = new Vector2(ownerPostition.x, ownerPostition.y);
     }
 
     @Override
