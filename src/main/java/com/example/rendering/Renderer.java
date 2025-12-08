@@ -24,9 +24,7 @@ public class Renderer {
 
     public void render(){
 
-        for (GameObject obj : scene.getGameObjects()) {
-            
-        }
+        
     }
 
     public GameScene getScene() {

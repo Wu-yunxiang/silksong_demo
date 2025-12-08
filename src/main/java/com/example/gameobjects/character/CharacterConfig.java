@@ -1,6 +1,6 @@
 package com.example.gameobjects.character;
 
-import com.example.gameobjects.character.Character.CharacterBehavior;;
+import com.example.gameobjects.character.Character.CharacterBehavior;
 /**
  * CharacterConfig
  * 存储角色相关的配置常量
@@ -15,31 +15,6 @@ public class CharacterConfig {
     // 尺寸常量
     public static final float DEFAULT_WIDTH = 50.0f;
     public static final float DEFAULT_HEIGHT = 100.0f;
-
-    //上批 , 下批 , 左批，右批 相对于人物碰撞箱四项的差 (x, y, width, height)
-    // 上批 (Attack Up)
-    public static final float ATTACK_UP_OFFSET_X = -10.0f;
-    public static final float ATTACK_UP_OFFSET_Y = 80.0f;
-    public static final float ATTACK_UP_OFFSET_WIDTH = 20.0f;
-    public static final float ATTACK_UP_OFFSET_HEIGHT = -20.0f;
-
-    // 下批 (Attack Down)
-    public static final float ATTACK_DOWN_OFFSET_X = -10.0f;
-    public static final float ATTACK_DOWN_OFFSET_Y = -60.0f;
-    public static final float ATTACK_DOWN_OFFSET_WIDTH = 20.0f;
-    public static final float ATTACK_DOWN_OFFSET_HEIGHT = -30.0f;
-
-    // 左批 (Attack Left)
-    public static final float ATTACK_LEFT_OFFSET_X = -100.0f;
-    public static final float ATTACK_LEFT_OFFSET_Y = 10.0f;
-    public static final float ATTACK_LEFT_OFFSET_WIDTH = 50.0f;
-    public static final float ATTACK_LEFT_OFFSET_HEIGHT = -20.0f;
-
-    // 右批 (Attack Right)
-    public static final float ATTACK_RIGHT_OFFSET_X = 50.0f;
-    public static final float ATTACK_RIGHT_OFFSET_Y = 10.0f;
-    public static final float ATTACK_RIGHT_OFFSET_WIDTH = 50.0f;
-    public static final float ATTACK_RIGHT_OFFSET_HEIGHT = -20.0f;
 
     // 游戏逻辑常量
     public static final int MAX_AIR_JUMPS = 2;

@@ -1,12 +1,12 @@
 package com.example.gameobjects.character;
 
-import com.example.Game;
 import com.example.gameobjects.GameObject;
 import com.example.math.PhysicsUtils;
 import com.example.math.Rect;
 import com.example.math.Vector2;
 import com.example.scene.GameScene;
 import com.example.gameobjects.skill.PurpleDragon;
+import com.example.pictureconfig.CharacterPicturesInformation;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -24,27 +24,27 @@ public class Character extends GameObject {
     private float immunityTime;          // 免疫时间 (Immunity Time)
     private Vector2 velocity;            // 速度 (Velocity)
     private Vector2 acceleration;        // 加速度 (Acceleration)
-    private Vector2 basePosition;        // 基准位置 (Base Position)
+    private Vector2 position;         // 动态基准位置 （人物中心在屏幕中的位置）
 
     private int health;               // 血量 (Health)
     private int energy;               // 能量 (Energy)
     private Orientation orientation;
     private Map<CharacterBehavior, Float> behaviors; // 当前帧触发的行为事件列表
+    private int actionNum;
     private int remainingAirJumps;   // 当前腾空跳跃剩余次数
     private int remainingDashes;      // 当前冲刺剩余次数
     private float remainingDashCooldown; // 冲刺剩余冷却时间
-    private Rect attackBox;          // 攻击判定箱
-    private Rect hitBox;             // 受击判定箱
     private GameScene scene;
 
     public Character(GameScene scene) {
         this.scene = scene;
         this.velocity = new Vector2();
         this.acceleration = new Vector2();
-        this.basePosition = new Vector2();
+        this.position = new Vector2();
         this.orientation= Orientation.RIGHT;
         this.behaviors = new HashMap<>();
         this.addBehavior(CharacterBehavior.STAND);
+        this.actionNum =1;
         this.isAlive = true;
         this.remainingAirJumps = CharacterConfig.MAX_AIR_JUMPS; 
         this.remainingDashes = CharacterConfig.MAX_DASHES;
@@ -104,10 +104,7 @@ public class Character extends GameObject {
         }//更新冲刺冷却时间
 
         // 物理计算
-        PhysicsUtils.updatePhysicsState(basePosition, velocity, acceleration, deltaTime);
-        // 同步判定箱
-        hitBox.setPosition(basePosition.x, basePosition.y);
-        attackBox.setPosition(basePosition.x, basePosition.y);
+        PhysicsUtils.updatePhysicsState(position, velocity, acceleration, deltaTime);
 
         for(Map.Entry<CharacterBehavior, Float> entry : behaviors.entrySet()){
             CharacterBehavior behavior = entry.getKey();
@@ -137,7 +134,7 @@ public class Character extends GameObject {
         }
 
         if(behavior == CharacterBehavior.CAST_SKILL && behaviors.get(behavior) <= 0 ){
-            scene.addGameObject(new PurpleDragon(basePosition));
+            scene.addGameObject(new PurpleDragon(position));
         }
 
         if(behavior == CharacterBehavior.WALK){
@@ -155,12 +152,53 @@ public class Character extends GameObject {
         this.behaviors.remove(behavior);
     }
 
+    public CharacterBehavior getPrimaryBehavior(){
+        for(CharacterBehavior behavior : behaviors.keySet()){
+            if(CharacterConfig.getBlockingDuration(behavior) != CharacterConfig.DURATION_NONE){
+                return behavior;
+            }
+        }
+
+        if(behaviors.containsKey(CharacterBehavior.JUMP)){
+            return CharacterBehavior.JUMP;
+        } else if(behaviors.containsKey(CharacterBehavior.WALK)){
+            return CharacterBehavior.WALK;
+        } else{
+            return CharacterBehavior.STAND;
+        }
+    }
+
     public Rect getHitBox() {
-        return hitBox;//没那么简单，等引入插入再修改
+        CharacterBehavior primaryBehavior = getPrimaryBehavior();
+        CharacterPicturesInformation.PictureInformation pictureInfo = CharacterPicturesInformation.characterPicturesInfo.get(primaryBehavior).get(actionNum-1);
+        if(Orientation.RIGHT == this.orientation){
+            return new Rect(position.x + pictureInfo.hitBox.x - pictureInfo.basePosition.x,
+                            position.y + pictureInfo.hitBox.y - pictureInfo.basePosition.y,
+                            pictureInfo.hitBox.width,
+                            pictureInfo.hitBox.height);
+        } else{
+            return new Rect(position.x + pictureInfo.basePosition.x - pictureInfo.hitBox.x - pictureInfo.hitBox.width,
+                            position.y + pictureInfo.hitBox.y - pictureInfo.basePosition.y,
+                            pictureInfo.hitBox.width,
+                            pictureInfo.hitBox.height);
+        }
     }
 
     public Rect getAttackBox() {
-        return attackBox;
+        CharacterBehavior primaryBehavior = getPrimaryBehavior();
+        CharacterPicturesInformation.PictureInformation pictureInfo = CharacterPicturesInformation.characterPicturesInfo.get(primaryBehavior).get(actionNum-1);
+        
+        if(Orientation.RIGHT == this.orientation){
+            return new Rect(position.x + pictureInfo.attackBox.x - pictureInfo.basePosition.x,
+                            position.y + pictureInfo.attackBox.y - pictureInfo.basePosition.y,
+                            pictureInfo.attackBox.width,
+                            pictureInfo.attackBox.height);
+        } else{
+            return new Rect(position.x + pictureInfo.basePosition.x - pictureInfo.attackBox.x - pictureInfo.attackBox.width,
+                            position.y + pictureInfo.attackBox.y - pictureInfo.basePosition.y,
+                            pictureInfo.attackBox.width,
+                            pictureInfo.attackBox.height);
+        }
     }
     
     public Map<CharacterBehavior, Float> getBehaviors() {
@@ -329,7 +367,7 @@ public class Character extends GameObject {
     }
 
     public Vector2 getPosition() {
-        return basePosition;
+        return position;
     }
 
     public Vector2 getVelocity() {
