@@ -11,7 +11,9 @@ import com.example.math.Rect;
 import java.util.ArrayList;
 
 public class CharacterConfigLoader {
-
+    private CharacterConfigLoader() {
+    }
+    
     public static void loadCharacterConfigs() {
         Path characterPath = Paths.get("src", "main", "resources", "Character_Standardized_Final");
         for(CharacterBehavior behavior : CharacterBehavior.values()){

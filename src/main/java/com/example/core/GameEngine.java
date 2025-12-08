@@ -3,35 +3,38 @@ package com.example.core;
 import org.lwjgl.glfw.GLFW;
 
 import com.example.input.InputManager;
-import com.example.rendering.Renderer;
+import com.example.pictureconfig.CharacterConfigLoader;
+import com.example.renderer.Renderer;
 import com.example.scene.GameScene;
+import com.example.Game;
 import com.example.gameobjects.character.Character;
+import com.example.gameobjects.character.CharacterConfig;
 
 /**
  * 游戏引擎
  * 代表了整个游戏的持续运行
  */
 public class GameEngine {
-    Renderer renderer;
-    long windowHandle;
-    InputManager inputManager;
-    boolean isRunning;
+    private GameScene scene;
+    private InputManager inputManager;
+    private boolean isRunning;
     
     private final int targetFPS = 60;
-    public GameEngine(Renderer renderer){
-        this.renderer = renderer;
+
+    public GameEngine(GameScene scene){
+        this.scene = scene;
     }
 
     public void initialize(){
-        this.windowHandle = renderer.getWindowHandle();
+        this.isRunning = false;
         this.inputManager = InputManager.getInstance();
-        this.isRunning = true;
-        GameScene scene = renderer.getScene();
-        scene.getGameObjects().add(new Character(scene));
         setupInput();
+        CharacterConfigLoader.loadCharacterConfigs();
+        scene.getGameObjects().add(new Character(scene));
     }
 
     public void start(){
+        this.isRunning = true;
         long lastFrameTime = System.nanoTime();
         long frameTimeNanos = (long)(1_000_000_000.0 / targetFPS);
         while (isRunning) {
@@ -39,7 +42,7 @@ public class GameEngine {
             
             if (currentTime - lastFrameTime >= frameTimeNanos) {
                 GameLogic.processFrame((currentTime - lastFrameTime) / 1_000_000_000.0f,renderer.getScene());
-                renderer.render();
+                scene.render();
                 lastFrameTime = currentTime;
             }
             
@@ -53,7 +56,7 @@ public class GameEngine {
     }
 
     private void setupInput(){
-        GLFW.glfwSetKeyCallback(windowHandle, (windowHandle, key, scancode, action, mods) -> {
+        GLFW.glfwSetKeyCallback(scene.getWindowHandle(), (windowHandle, key, scancode, action, mods) -> {
             if (action == GLFW.GLFW_PRESS) {
                 inputManager.onKeyPressed(key);
             } else if (action == GLFW.GLFW_RELEASE) {
@@ -61,7 +64,7 @@ public class GameEngine {
             }
         });
         
-        GLFW.glfwSetMouseButtonCallback(windowHandle, (windowHandle, button, action, mods) -> {
+        GLFW.glfwSetMouseButtonCallback(scene.getWindowHandle(), (windowHandle, button, action, mods) -> {
             if (action == GLFW.GLFW_PRESS) {
                 inputManager.onMousePressed(button);
             } else if (action == GLFW.GLFW_RELEASE) {
@@ -69,7 +72,7 @@ public class GameEngine {
             }
         });
         
-        GLFW.glfwSetCursorPosCallback(windowHandle, (windowHandle, xpos, ypos) -> {
+        GLFW.glfwSetCursorPosCallback(scene.getWindowHandle(), (windowHandle, xpos, ypos) -> {
             inputManager.onMouseMoved((int)xpos, (int)ypos);
         });
     }
