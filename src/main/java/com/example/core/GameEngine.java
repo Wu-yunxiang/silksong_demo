@@ -3,12 +3,9 @@ package com.example.core;
 import org.lwjgl.glfw.GLFW;
 
 import com.example.input.InputManager;
-import com.example.pictureconfig.CharacterConfigLoader;
-import com.example.renderer.Renderer;
+import com.example.pictureconfig.*;
 import com.example.scene.GameScene;
-import com.example.Game;
 import com.example.gameobjects.character.Character;
-import com.example.gameobjects.character.CharacterConfig;
 
 /**
  * 游戏引擎
@@ -19,7 +16,7 @@ public class GameEngine {
     private InputManager inputManager;
     private boolean isRunning;
     
-    private final int targetFPS = 60;
+    public static final int TARGET_FPS = 60;
 
     public GameEngine(GameScene scene){
         this.scene = scene;
@@ -30,13 +27,14 @@ public class GameEngine {
         this.inputManager = InputManager.getInstance();
         setupInput();
         CharacterConfigLoader.loadCharacterConfigs();
+
         scene.getGameObjects().add(new Character(scene));
     }
 
     public void start(){
         this.isRunning = true;
         long lastFrameTime = System.nanoTime();
-        long frameTimeNanos = (long)(1_000_000_000.0 / targetFPS);
+        long frameTimeNanos = (long)(1_000_000_000.0 / TARGET_FPS);
         while (isRunning) {
             long currentTime = System.nanoTime();
             

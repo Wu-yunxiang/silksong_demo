@@ -8,7 +8,7 @@ import com.example.math.Vector2;
  */
 public class PurpleDragonConfig {
     // 速度 (像素/秒)
-    public static final float SPEED = 800.0f;
+    public static final float SPEED = 2200.0f;
     // 消耗能量
     public static final int ENERGY_COST = 3;
     // 伤害值

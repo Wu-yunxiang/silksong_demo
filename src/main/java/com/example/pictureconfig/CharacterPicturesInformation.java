@@ -19,15 +19,15 @@ public class CharacterPicturesInformation {
         public Vector2 basePosition; //相对于左下角的基准位置
         public Rect hitBox;  //相对于左下角的受击框
         public Rect attackBox; //相对于左下角的攻击框
-        public int frames; //持续帧数
+        public float durationSeconds; //该动作持续时间，单位秒
 
-        public PictureInformation(int textureId, Vector2 pictureSize, Vector2 basePosition, Rect hitBox, Rect attackBox) {
+        public PictureInformation(int textureId, Vector2 pictureSize, Vector2 basePosition, Rect hitBox, Rect attackBox, float durationSeconds) {
             this.textureId = textureId;
             this.pictureSize = pictureSize;
             this.basePosition = basePosition;
             this.hitBox = hitBox;
             this.attackBox = attackBox;
-            this.frames = -1;
+            this.durationSeconds = durationSeconds;
         }
     }
 }

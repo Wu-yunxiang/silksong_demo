@@ -7,6 +7,7 @@ import com.example.gameobjects.GameObject;
 import com.example.gameobjects.character.Character;
 import com.example.pictureconfig.CharacterPicturesInformation;
 import com.example.pictureconfig.GameSceneConfig;
+import com.example.gameobjects.character.CharacterConfig;
 import org.lwjgl.opengl.GL11;
 
 /**
@@ -28,7 +29,7 @@ public class PurpleDragon extends GameObject {
         this.speed = 0;
 
         // 计算横坐标：owner CAST_SKILL 状态的 skillStartActionNum 的图片右边界在界面里的横坐标
-        CharacterPicturesInformation.PictureInformation pi =CharacterPicturesInformation.characterPicturesInfo.get(Character.CharacterBehavior.CAST_SKILL).get(GameSceneConfig.skillStartActionNum - 1);
+        CharacterPicturesInformation.PictureInformation pi =CharacterPicturesInformation.characterPicturesInfo.get(Character.CharacterBehavior.CAST_SKILL).get(CharacterConfig.skillStartActionNum - 1);
         if (this.orientation) { // RIGHT
             this.position.x = owner.getPosition().x + pi.pictureSize.x - pi.basePosition.x;
         } else { // LEFT
@@ -37,12 +38,14 @@ public class PurpleDragon extends GameObject {
 
         // 纵坐标：使得 skillPicturesInfo[0] 的模型底部落在地面边界上
         this.position.y = GameSceneConfig.GroundHeight + PurpleDragonConfig.skillPicturesInfo[0].basePosition.y;
+
+        owner.setPurpleDragon(this);
     }
 
     @Override
     public void update(float deltaTime, GameScene scene) { // 每帧更新
         if(!isComplete){
-            if(owner.getActionNum() >= GameSceneConfig.skillCompleteActionNum){
+            if(owner.getActionNum() >= CharacterConfig.skillCompleteActionNum){
                 isComplete = true;
                 speed = PurpleDragonConfig.SPEED;
             }else {
@@ -110,6 +113,10 @@ public class PurpleDragon extends GameObject {
         }
     }
 
+    public void setAlive(boolean alive) {
+        isAlive = alive;
+    }
+    
     public boolean isAlive() {
         return isAlive;
     }

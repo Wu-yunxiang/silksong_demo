@@ -5,20 +5,27 @@ import com.example.math.PhysicsUtils;
 import com.example.math.Rect;
 import com.example.math.Vector2;
 import com.example.scene.GameScene;
-import com.example.gameobjects.skill.PurpleDragon;
 import com.example.pictureconfig.CharacterPicturesInformation;
 import org.lwjgl.opengl.GL11;
 import com.example.pictureconfig.GameSceneConfig;
+import com.example.gameobjects.skill.PurpleDragon;
+
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+
+import javax.swing.Action;
 
 /**
  * 角色类 (Character Class)
  */
 public class Character extends GameObject {
+    private GameScene scene;
+    private PurpleDragon purpleDragon; // 角色释放的龙波对象 (Purple Dragon Object)
     private boolean isAlive;            // 是否存活 (Is Alive)
     private boolean isImmune;            // 是否处于免疫状态 (Is Immune)
+    private boolean isFalling;          // 是否下落状态
     private float immunityTime;          // 免疫时间 (Immunity Time)
     private Vector2 velocity;            // 速度 (Velocity)
     private Vector2 acceleration;        // 加速度 (Acceleration)
@@ -26,12 +33,10 @@ public class Character extends GameObject {
     private int health;               // 血量 (Health)
     private int energy;               // 能量 (Energy)
     private Orientation orientation;
-    private Map<CharacterBehavior, Float> behaviors; // 当前帧触发的行为事件列表
-    private int actionNum;              // 当前动作编号 (用于动画切换)
+    private Map<CharacterBehavior, ActionState> behaviors; // 当前帧触发的行为事件列表
     private int remainingAirJumps;   // 当前腾空跳跃剩余次数
     private int remainingDashes;      // 当前冲刺剩余次数
     private float remainingDashCooldown; // 冲刺剩余冷却时间
-    private GameScene scene;
 
     public Character(GameScene scene) {
         this.scene = scene;
@@ -40,7 +45,7 @@ public class Character extends GameObject {
         this.orientation= Orientation.RIGHT;
         this.behaviors = new HashMap<>();
         this.addBehavior(CharacterBehavior.STAND);
-        this.actionNum =1;
+        this.isFalling = false;
         this.isAlive = true;
         this.remainingAirJumps = CharacterConfig.MAX_AIR_JUMPS; 
         this.remainingDashes = CharacterConfig.MAX_DASHES;
@@ -69,16 +74,59 @@ public class Character extends GameObject {
         RIGHT
     }
 
-    public void updateRemainingTime(float deltaTime, CharacterBehavior behavior) {
-        if(CharacterConfig.getBlockingDuration(behavior) == CharacterConfig.DURATION_NONE){
-            return;
+    public static class ActionState{
+        public int actionNum;
+        public float duration;
+
+        public ActionState(int actionNum, float duration){
+            this.actionNum = actionNum;
+            this.duration = duration;
         }
-        float remainingTime = behaviors.get(behavior) - deltaTime;
+
+        public void setActionNum(int actionNum){
+            this.actionNum = actionNum;
+        }
+
+        public void setDuration(float duration){
+            this.duration = duration;
+        }
+    }
+
+    public ActionState getActionState(CharacterBehavior behavior){
+        return behaviors.get(behavior);
+    }
+
+    public int getBehaviorSize(CharacterBehavior behavior){
+        return CharacterPicturesInformation.characterPicturesInfo.get(behavior).size();
+    }
+
+    public float getDuration(CharacterBehavior behavior, int actionNum){
+        return CharacterPicturesInformation.characterPicturesInfo.get(behavior).get(actionNum - 1).durationSeconds;
+    }
+
+    public void updateRemainingTime(float deltaTime, CharacterBehavior behavior) {
+        ActionState actionState = getActionState(behavior);
+        float remainingTime = actionState.duration - deltaTime;
         if (remainingTime <= 0) {
-            behaviors.put(behavior, remainingTime);
-            removeBehavior(behavior);
+            if(actionState.actionNum == getBehaviorSize(behavior)){
+                if(behavior == CharacterBehavior.HEAL){
+                    heal(CharacterConfig.HEAL_AMOUNT);
+                }
+                if(behavior == CharacterBehavior.DASH){
+                    remainingDashCooldown = CharacterConfig.DASH_COOLDOWN;
+                }
+                removeBehavior(behavior);
+            }else{
+                actionState.setActionNum(actionState.actionNum + 1);
+                actionState.setDuration(getDuration(behavior, actionState.actionNum));
+                if(behavior == CharacterBehavior.CAST_SKILL){
+                    if(actionState.actionNum == CharacterConfig.skillStartActionNum){
+                        scene.addGameObject(new PurpleDragon(this));
+                    } 
+                }
+            }
         } else {
-            behaviors.put(behavior, remainingTime);
+            actionState.setDuration(remainingTime);
         }
     }
 
@@ -101,28 +149,18 @@ public class Character extends GameObject {
         // 物理计算
         PhysicsUtils.updatePhysicsState(position, velocity, acceleration, deltaTime);
 
-        for(Map.Entry<CharacterBehavior, Float> entry : behaviors.entrySet()){
+        for(Map.Entry<CharacterBehavior, ActionState> entry : behaviors.entrySet()){
             CharacterBehavior behavior = entry.getKey();
             updateRemainingTime(deltaTime, behavior);
-        }//去除掉已经结束的behavior / 更新剩余时间
-    }
-
-    public void clearBehaviors() {
-        for(CharacterBehavior behavior : behaviors.keySet()){
-            if(behavior == CharacterBehavior.JUMP){
-                continue;
-            }
-            removeBehavior(behavior);
-        }
+        } // 更新剩余时间 / 改变动作 / 去除掉已经结束的behavior
     }
 
     @Override
     public void render() {
         // 根据当前主要行为与动作编号获取贴图信息
         CharacterBehavior primaryBehavior = getPrimaryBehavior();
-        int idx = actionNum - 1;
-        java.util.List<CharacterPicturesInformation.PictureInformation> pics = CharacterPicturesInformation.characterPicturesInfo.get(primaryBehavior);
-        CharacterPicturesInformation.PictureInformation pictureInfo = pics.get(idx);
+        List<CharacterPicturesInformation.PictureInformation> pics = CharacterPicturesInformation.characterPicturesInfo.get(primaryBehavior);
+        CharacterPicturesInformation.PictureInformation pictureInfo = pics.get(behaviors.get(primaryBehavior).actionNum - 1);
 
         int texId = pictureInfo.textureId;
         float w = pictureInfo.pictureSize.x;
@@ -158,39 +196,9 @@ public class Character extends GameObject {
         GL11.glEnd();
     }
 
-    public void removeBehavior(CharacterBehavior behavior){
-        if(isOnGround()){
-            acceleration.set(0,0);
-        } else{
-            acceleration.set(0,CharacterConfig.GRAVITY);
-        }
-
-        if(behavior == CharacterBehavior.HEAL && behaviors.get(behavior) <= 0 ){
-            heal(CharacterConfig.HEAL_AMOUNT);
-        }
-
-        if(behavior == CharacterBehavior.CAST_SKILL && behaviors.get(behavior) <= 0 ){
-            scene.addGameObject(new PurpleDragon(this));
-        }
-
-        if(behavior == CharacterBehavior.WALK){
-            velocity.setX(0);
-        }
-
-        if(!isAttack(behavior) && CharacterConfig.getBlockingDuration(behavior) != CharacterConfig.DURATION_NONE){
-            velocity.set(0,0);
-        }
-
-        if(behavior == CharacterBehavior.DASH){
-            remainingDashCooldown = CharacterConfig.DASH_COOLDOWN;
-        }
-
-        this.behaviors.remove(behavior);
-    }
-
     public CharacterBehavior getPrimaryBehavior(){
         for(CharacterBehavior behavior : behaviors.keySet()){
-            if(CharacterConfig.getBlockingDuration(behavior) != CharacterConfig.DURATION_NONE){
+            if(CharacterConfig.isBlocking(behavior)){
                 return behavior;
             }
         }
@@ -206,7 +214,7 @@ public class Character extends GameObject {
 
     public Rect getHitBox() {
         CharacterBehavior primaryBehavior = getPrimaryBehavior();
-        CharacterPicturesInformation.PictureInformation pictureInfo = CharacterPicturesInformation.characterPicturesInfo.get(primaryBehavior).get(actionNum-1);
+        CharacterPicturesInformation.PictureInformation pictureInfo = CharacterPicturesInformation.characterPicturesInfo.get(primaryBehavior).get(behaviors.get(primaryBehavior).actionNum-1);
         if(Orientation.RIGHT == this.orientation){
             return new Rect(position.x + pictureInfo.hitBox.x - pictureInfo.basePosition.x,
                             position.y + pictureInfo.hitBox.y - pictureInfo.basePosition.y,
@@ -222,7 +230,7 @@ public class Character extends GameObject {
 
     public Rect getAttackBox() {
         CharacterBehavior primaryBehavior = getPrimaryBehavior();
-        CharacterPicturesInformation.PictureInformation pictureInfo = CharacterPicturesInformation.characterPicturesInfo.get(primaryBehavior).get(actionNum-1);
+        CharacterPicturesInformation.PictureInformation pictureInfo = CharacterPicturesInformation.characterPicturesInfo.get(primaryBehavior).get(behaviors.get(primaryBehavior).actionNum-1);
         
         if(Orientation.RIGHT == this.orientation){
             return new Rect(position.x + pictureInfo.attackBox.x - pictureInfo.basePosition.x,
@@ -235,14 +243,6 @@ public class Character extends GameObject {
                             pictureInfo.attackBox.width,
                             pictureInfo.attackBox.height);
         }
-    }
-    
-    public Map<CharacterBehavior, Float> getBehaviors() {
-        return behaviors;
-    }
-
-    public boolean isFalling() {
-        return true;//暂时先这样写，后续根据碰撞检测结果实现
     }
 
     public boolean isAttack(CharacterBehavior behavior){
@@ -264,18 +264,18 @@ public class Character extends GameObject {
                 removeBehavior(CharacterBehavior.STAND);
             }
 
-            if(CharacterConfig.getBlockingDuration(behavior) != CharacterConfig.DURATION_NONE){
+            if(CharacterConfig.isBlocking(behavior)){
                 if(!isAttack(behavior) && !hasAttackBehavior()){
                     removeBehavior(CharacterBehavior.WALK);
                 }
             }
         }
 
-        this.behaviors.put(behavior, CharacterConfig.getBlockingDuration(behavior));
+        this.behaviors.put(behavior, new ActionState(1, getDuration(behavior, 1)));
 
         switch (behavior) {
             case WALK:
-                velocity.setX((orientation == Orientation.RIGHT) ? CharacterConfig.MOVE_SPEED : -CharacterConfig.MOVE_SPEED);
+                velocity.setX((orientation == Orientation.RIGHT) ? CharacterConfig.WALK_SPEED : -CharacterConfig.WALK_SPEED);
                 acceleration.setX(0);
                 break;
             case JUMP:
@@ -312,10 +312,53 @@ public class Character extends GameObject {
         }
     }
 
+    public void clearBehaviors() { //处理中断情况
+        for(CharacterBehavior behavior : behaviors.keySet()){
+            if(behavior == CharacterBehavior.JUMP){
+                continue;
+            }
+
+            ActionState actionState = getActionState(behavior);
+            if(behavior == CharacterBehavior.CAST_SKILL){
+                if(actionState.actionNum >= CharacterConfig.skillStartActionNum && actionState.actionNum < CharacterConfig.skillCompleteActionNum){
+                    purpleDragon.setAlive(false);
+                }
+            }
+
+            if(behavior == CharacterBehavior.DASH){
+                remainingDashCooldown = CharacterConfig.DASH_COOLDOWN;
+            }
+
+            removeBehavior(behavior);
+        }
+    }
+
+    public void removeBehavior(CharacterBehavior behavior){ //单纯移除行为
+        if(isOnGround()){
+            acceleration.set(0,0);
+        } else{
+            acceleration.set(0,CharacterConfig.GRAVITY);
+        }
+
+        if(behavior == CharacterBehavior.WALK){
+            velocity.setX(0);
+        }
+
+        if(!isAttack(behavior) && CharacterConfig.isBlocking(behavior)){
+            velocity.set(0,0);
+        }
+
+        this.behaviors.remove(behavior);
+    }
+
+    public Map<CharacterBehavior, ActionState> getBehaviors() {
+        return behaviors;
+    }
+
     public boolean hasBehavior(CharacterBehavior characterBehavior){
         return behaviors.containsKey(characterBehavior);
     }
-    public void setBehaviors(Map<CharacterBehavior, Float> behaviors) {
+    public void setBehaviors(Map<CharacterBehavior, ActionState> behaviors) {
         this.behaviors = behaviors;
     }
 
@@ -412,6 +455,10 @@ public class Character extends GameObject {
     }
 
     public int getActionNum() {
-        return this.actionNum;
+        return behaviors.get(getPrimaryBehavior()).actionNum;
+    }
+
+    public void setPurpleDragon(PurpleDragon purpleDragon) {
+        this.purpleDragon = purpleDragon;
     }
 }

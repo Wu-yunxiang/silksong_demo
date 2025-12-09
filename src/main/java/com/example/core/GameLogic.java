@@ -36,11 +36,11 @@ public class GameLogic {
         InputManager input = InputManager.getInstance();
         input.pollEvents();
 
-        Map<CharacterBehavior, Float> behaviors = character.getBehaviors();
-        //是否有阻塞
+        Map<CharacterBehavior, Character.ActionState> behaviors = character.getBehaviors();
+
         for(CharacterBehavior behavior : behaviors.keySet()){
-            if(CharacterConfig.getBlockingDuration(behavior) > 0){
-                return;//键盘输入的行为均阻塞，hurt并非键盘输入行为故不在此处处理
+            if(CharacterConfig.isBlocking(behavior)){
+                return; // 键盘输入的行为均阻塞
             }
         }
 
@@ -123,7 +123,6 @@ public class GameLogic {
                 character.addBehavior(CharacterBehavior.STAND);
             }
         }
-
     }
     
     private static void updateGameLogic(float deltaTime, GameScene scene) {

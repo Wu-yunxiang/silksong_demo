@@ -10,8 +10,6 @@ public class GameSceneConfig {
     public static final int initialCharacterPositionX = GroundWidth; //角色初始位置X
     //角色初始位置Y（中心y和脚底y之差 + GroundHeight）
     public static final int initialCharacterPositionY = 100 + GroundHeight; 
-    public static final int skillStartActionNum = 3;
-    public static final int skillCompleteActionNum = 5;
 
     private GameSceneConfig() {
     }
