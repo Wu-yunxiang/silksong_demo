@@ -8,12 +8,14 @@ import org.lwjgl.system.MemoryStack;
 import org.lwjgl.system.MemoryUtil;
 import org.lwjgl.stb.STBImage;
 
+import com.example.gameobjects.GameObject;
 import com.example.pictureconfig.GameSceneConfig;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
+import java.util.List;
 
 /**
  * 渲染器（Renderer）。
@@ -80,7 +82,7 @@ import java.nio.IntBuffer;
     /**
      * 加载纹理并返回 {texId, width, height}
      */
-    private static int[] loadTextureInfoFromClasspath(String resourcePath) {
+    public static int[] loadTextureInfoFromClasspath(String resourcePath) {
         STBImage.stbi_set_flip_vertically_on_load(true);
         try (InputStream in = Renderer.class.getResourceAsStream(resourcePath)) {
             if (in == null) {
@@ -140,7 +142,7 @@ import java.nio.IntBuffer;
      /**
       * 渲染一帧
       */
-    public static void render() {
+    public static void render(List<GameObject> gameObjects) {
         if (window == MemoryUtil.NULL) {
             System.err.println("Renderer not initialized. Call initial() first.");
             return;
@@ -204,6 +206,10 @@ import java.nio.IntBuffer;
                     // 普通完整地块
                     drawTexturedQuad(groundFullTexId, x, 0f, groundFullW, groundFullH);
                 }
+            }
+
+            for(GameObject obj : gameObjects) { //渲染游戏对象
+                obj.render();
             }
 
             GL11.glBindTexture(GL11.GL_TEXTURE_2D, 0);

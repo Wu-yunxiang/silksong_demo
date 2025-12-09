@@ -12,10 +12,6 @@ public class CharacterConfig {
     public static final float JUMP_VELOCITY = 600.0f;
     public static final float DASH_SPEED = 800.0f;
 
-    // 尺寸常量
-    public static final float DEFAULT_WIDTH = 50.0f;
-    public static final float DEFAULT_HEIGHT = 100.0f;
-
     // 游戏逻辑常量
     public static final int MAX_AIR_JUMPS = 2;
     public static final int MAX_DASHES = 1;
@@ -36,9 +32,9 @@ public class CharacterConfig {
 
     //冲刺冷却时间 (秒)
     public static final float DASH_COOLDOWN = 1.0f;
-
-    public static final float IMMUNITY_DURATION = 1.0f; // 受伤后免疫时间 (秒)
-
+    // 受伤后免疫时间 (秒)
+    public static final float IMMUNITY_DURATION = 1.0f; 
+    
     /**
      * 获取指定行为的阻塞时间
      */

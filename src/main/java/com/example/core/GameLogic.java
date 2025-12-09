@@ -127,15 +127,24 @@ public class GameLogic {
     }
     
     private static void updateGameLogic(float deltaTime, GameScene scene) {
+        //只有人物和龙update不为空，相当于更新人物和屏幕里的所有龙, 先更新人物再更新龙
         for (GameObject obj : scene.getGameObjects()) {
-            obj.update(deltaTime, scene);
-        } //只有人物和龙update不为空，相当于更新人物和屏幕里的所有龙 
+            if(obj instanceof Character){
+                obj.update(deltaTime, scene);
+            }
+        }  
+
+        for(GameObject obj : scene.getGameObjects()) {
+            if(obj instanceof PurpleDragon){
+                obj.update(deltaTime, scene);
+            }
+        }
     }
 
     private static void checkGameConditions(GameScene scene) {
         Character character = scene.getCharacter();
-        boundaryChecks(character, scene);// 合理化了更新之后的状态
         handleCollisions(character, scene);
+        boundaryChecks(character, scene);
     }
 
     private static void handleCollisions(Character character, GameScene scene) {

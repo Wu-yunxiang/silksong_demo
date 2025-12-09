@@ -12,7 +12,7 @@ import java.util.ArrayList;
  * 游戏主场景。
  */
 public class GameScene {
-    //背景中的游戏对象
+    //游戏对象
     private List<GameObject> gameObjects;
     public GameScene(){ 
         gameObjects = new ArrayList<>();
@@ -28,7 +28,7 @@ public class GameScene {
     }
 
     public void render(){
-        Renderer.render();
+        Renderer.render(gameObjects);
     }
 
     public void removeGameObject(GameObject obj) {

@@ -7,4 +7,5 @@ import com.example.scene.GameScene;
  */
 public abstract class GameObject {
 	public abstract void update(float deltaTime, GameScene scene);
+	public abstract void render();
 }

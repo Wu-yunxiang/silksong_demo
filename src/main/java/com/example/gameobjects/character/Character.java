@@ -7,30 +7,27 @@ import com.example.math.Vector2;
 import com.example.scene.GameScene;
 import com.example.gameobjects.skill.PurpleDragon;
 import com.example.pictureconfig.CharacterPicturesInformation;
+import org.lwjgl.opengl.GL11;
+import com.example.pictureconfig.GameSceneConfig;
+
 import java.util.HashMap;
 import java.util.Map;
 
-
 /**
  * 角色类 (Character Class)
- * 说明：
- * - 一个character有状态组件（血量能量两个object），有技能组件(一个object列表)。有基本信息含mode 
- * - 渲染的时候主体根据mode分类渲染，组件要渲染
  */
 public class Character extends GameObject {
-    // 基础字段
     private boolean isAlive;            // 是否存活 (Is Alive)
     private boolean isImmune;            // 是否处于免疫状态 (Is Immune)
     private float immunityTime;          // 免疫时间 (Immunity Time)
     private Vector2 velocity;            // 速度 (Velocity)
     private Vector2 acceleration;        // 加速度 (Acceleration)
     private Vector2 position;         // 动态基准位置 （人物中心在屏幕中的位置）
-
     private int health;               // 血量 (Health)
     private int energy;               // 能量 (Energy)
     private Orientation orientation;
     private Map<CharacterBehavior, Float> behaviors; // 当前帧触发的行为事件列表
-    private int actionNum;
+    private int actionNum;              // 当前动作编号 (用于动画切换)
     private int remainingAirJumps;   // 当前腾空跳跃剩余次数
     private int remainingDashes;      // 当前冲刺剩余次数
     private float remainingDashCooldown; // 冲刺剩余冷却时间
@@ -38,9 +35,8 @@ public class Character extends GameObject {
 
     public Character(GameScene scene) {
         this.scene = scene;
-        this.velocity = new Vector2();
-        this.acceleration = new Vector2();
-        this.position = new Vector2();
+        this.position = new Vector2(GameSceneConfig.initialCharacterPositionX,
+                                    GameSceneConfig.initialCharacterPositionY);
         this.orientation= Orientation.RIGHT;
         this.behaviors = new HashMap<>();
         this.addBehavior(CharacterBehavior.STAND);
@@ -48,7 +44,6 @@ public class Character extends GameObject {
         this.isAlive = true;
         this.remainingAirJumps = CharacterConfig.MAX_AIR_JUMPS; 
         this.remainingDashes = CharacterConfig.MAX_DASHES;
-        //attackBox和hitBox的初始化留待后续根据贴图和需求实现 
         this.health = CharacterConfig.MAX_HEALTH;
         this.energy = 0;// 初始化血量和能量
     }
@@ -56,7 +51,7 @@ public class Character extends GameObject {
     /**
      * 对外可见的角色模式枚举（用于渲染与逻辑判断）
      */
-    public enum CharacterBehavior {//每一轮的最后根据情况添加几个初始behavior用于阻塞或其它
+    public enum CharacterBehavior {
         STAND,
         WALK,
         JUMP,
@@ -64,8 +59,8 @@ public class Character extends GameObject {
         ATTACK_NORMAL,
         ATTACK_UP,
         ATTACK_DOWN,
-        CAST_SKILL, // 短按Q释放技能
-        HEAL,       // 按H回血
+        CAST_SKILL, 
+        HEAL,       
         HURT
     }
 
@@ -88,7 +83,7 @@ public class Character extends GameObject {
     }
 
     @Override
-    public void update(float deltaTime, GameScene scene) {//每帧update前设置behaviors，update结束后清除walk。此时hasBehavior无冲突且合理地包含了当前所有行为，jump和walk、dash、cast_skill、hurt不互斥，其余behavior均互斥
+    public void update(float deltaTime, GameScene scene) {
         if(isImmune){
             immunityTime -= deltaTime;
             if(immunityTime <= 0){
@@ -109,8 +104,7 @@ public class Character extends GameObject {
         for(Map.Entry<CharacterBehavior, Float> entry : behaviors.entrySet()){
             CharacterBehavior behavior = entry.getKey();
             updateRemainingTime(deltaTime, behavior);
-        }//去除掉已经结束的behavior，或更新剩余时间
-
+        }//去除掉已经结束的behavior / 更新剩余时间
     }
 
     public void clearBehaviors() {
@@ -120,6 +114,48 @@ public class Character extends GameObject {
             }
             removeBehavior(behavior);
         }
+    }
+
+    @Override
+    public void render() {
+        // 根据当前主要行为与动作编号获取贴图信息
+        CharacterBehavior primaryBehavior = getPrimaryBehavior();
+        int idx = actionNum - 1;
+        java.util.List<CharacterPicturesInformation.PictureInformation> pics = CharacterPicturesInformation.characterPicturesInfo.get(primaryBehavior);
+        CharacterPicturesInformation.PictureInformation pictureInfo = pics.get(idx);
+
+        int texId = pictureInfo.textureId;
+        float w = pictureInfo.pictureSize.x;
+        float h = pictureInfo.pictureSize.y;
+        float baseX = pictureInfo.basePosition.x;
+        float baseY = pictureInfo.basePosition.y;
+
+        // 计算绘制左下角坐标，使得图片中以 basePosition 为基点的位置对齐到角色的 world position
+        float drawX;
+        if (this.orientation == Orientation.RIGHT) {
+            drawX = this.position.x - baseX;
+        } else {
+            // 水平镜像时，图片左边相对于基点的偏移会变为 (w - baseX)
+            drawX = this.position.x - (w - baseX);
+        }
+        float drawY = this.position.y - baseY;
+
+        // 绘制四边形并根据朝向选择纹理坐标（水平镜像通过交换 u）
+        GL11.glBindTexture(GL11.GL_TEXTURE_2D, texId);
+        GL11.glBegin(GL11.GL_QUADS);
+        if (this.orientation == Orientation.RIGHT) {
+            GL11.glTexCoord2f(0f, 0f); GL11.glVertex2f(drawX, drawY);
+            GL11.glTexCoord2f(1f, 0f); GL11.glVertex2f(drawX + w, drawY);
+            GL11.glTexCoord2f(1f, 1f); GL11.glVertex2f(drawX + w, drawY + h);
+            GL11.glTexCoord2f(0f, 1f); GL11.glVertex2f(drawX, drawY + h);
+        } else {
+            // 水平镜像：交换 u=0/1
+            GL11.glTexCoord2f(1f, 0f); GL11.glVertex2f(drawX, drawY);
+            GL11.glTexCoord2f(0f, 0f); GL11.glVertex2f(drawX + w, drawY);
+            GL11.glTexCoord2f(0f, 1f); GL11.glVertex2f(drawX + w, drawY + h);
+            GL11.glTexCoord2f(1f, 1f); GL11.glVertex2f(drawX, drawY + h);
+        }
+        GL11.glEnd();
     }
 
     public void removeBehavior(CharacterBehavior behavior){
@@ -134,7 +170,7 @@ public class Character extends GameObject {
         }
 
         if(behavior == CharacterBehavior.CAST_SKILL && behaviors.get(behavior) <= 0 ){
-            scene.addGameObject(new PurpleDragon(position));
+            scene.addGameObject(new PurpleDragon(this));
         }
 
         if(behavior == CharacterBehavior.WALK){
@@ -323,7 +359,7 @@ public class Character extends GameObject {
     }
 
     public boolean isOnGround() {
-        return true;//暂时先这样写，后续根据碰撞检测结果实现
+        return getHitBox().y <= GameSceneConfig.GroundHeight;
     }
 
     public float getDashCooldown() {
@@ -366,11 +402,16 @@ public class Character extends GameObject {
         }
     }
 
+    // --- 
     public Vector2 getPosition() {
         return position;
     }
 
     public Vector2 getVelocity() {
         return velocity;
+    }
+
+    public int getActionNum() {
+        return this.actionNum;
     }
 }
