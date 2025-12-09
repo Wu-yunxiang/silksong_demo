@@ -1,5 +1,7 @@
 package com.example.pictureconfig;
 
+import com.example.math.Rect;
+
 public class GameSceneConfig {
     public static final int ScreenWidth = 1693; //游戏窗口尺寸硬编码
     public static final int ScreenHeight = 952;
@@ -9,7 +11,12 @@ public class GameSceneConfig {
     public static final int secondSpikesGroundIndex = 8; //第二个有尖刺的地板索引
     public static final int initialCharacterPositionX = GroundWidth; //角色初始位置X
     //角色初始位置Y（中心y和脚底y之差 + GroundHeight）
-    public static final int initialCharacterPositionY = 100 + GroundHeight; 
+    public static final int initialCharacterPositionY = 100 + GroundHeight;
+    //尖刺判定范围
+    public static final Rect[] spikesRanges = {
+        new Rect(2 * GroundWidth, GroundHeight / 2 , GroundWidth , GroundHeight / 2),
+        new Rect(7 * GroundWidth, GroundHeight / 2 , GroundWidth , GroundHeight / 2)
+    };
 
     private GameSceneConfig() {
     }

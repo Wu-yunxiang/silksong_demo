@@ -10,6 +10,7 @@ import com.example.gameobjects.GameObject;
 import com.example.gameobjects.skill.PurpleDragonConfig;
 import com.example.gameobjects.character.CharacterConfig;
 import com.example.gameobjects.character.Character.Orientation;
+import com.example.pictureconfig.*;
 import com.example.math.Vector2;
 import org.lwjgl.glfw.GLFW;
 import java.util.Map;
@@ -151,34 +152,31 @@ public class GameLogic {
         Rect characterAttackBox = character.getAttackBox();
         
         for (GameObject obj : scene.getGameObjects()) {
-            if (obj == character) continue; // Skip self
-            if (obj instanceof Terrain){
-                Terrain terrain = (Terrain) obj;
-                boolean hit = false;
-                boolean hitTrap = false;
-                for(Rect trapBoundingBox : terrain.getTrapBoundingBoxes()){
+            if(!(obj instanceof Character)) continue;
+            boolean hurt = false;
+            boolean attackSpikes = false;
+            for(Rect spikesBounding : GameSceneConfig.spikesRanges){
+                if(!hurt && !character.isImmune() && characterHitBox.intersects(spikesBounding)){
+                    hurt = true;
+                    character.addBehavior(CharacterBehavior.HURT);
+                }
 
-                    if(!hit && !character.isImmune() && characterHitBox.intersects(trapBoundingBox)){
-                        hit = true;
-                        character.addBehavior(CharacterBehavior.HURT);
-                    }
-
-                    if(!hitTrap && character.hasBehavior(CharacterBehavior.ATTACK_DOWN)){
-                        if (characterAttackBox.intersects(trapBoundingBox)) {
-                            character.getVelocity().setY(CharacterConfig.JUMP_VELOCITY * 0.8f);
-                            character.setRemainingAirJumps(1);
-                            character.setRemainingDashes(1);
-                            hitTrap = true;
-                        }
+                if(!attackSpikes && character.hasBehavior(CharacterBehavior.ATTACK_DOWN)){
+                    if (characterAttackBox.intersects(spikesBounding)) {
+                        attackSpikes = true;
+                        character.getVelocity().setY(CharacterConfig.DOUBLE_JUMP_VELOCITY);
+                        character.setRemainingAirJumps(1);
+                        character.setRemainingDashes(1);
                     }
                 }
             }
 
-            if(obj instanceof PurpleDragon){
-                PurpleDragon purpleDragon = (PurpleDragon) obj;
+            for(GameObject object : scene.getGameObjects()) {
+                if(!(object instanceof PurpleDragon)) continue;
+                PurpleDragon purpleDragon = (PurpleDragon) object;
                 if(character.hasBehavior(CharacterBehavior.ATTACK_DOWN)){
                     if (characterAttackBox.intersects(purpleDragon.getBoundingBox())) {
-                        character.getVelocity().setY(CharacterConfig.JUMP_VELOCITY * 0.8f);
+                        character.getVelocity().setY(CharacterConfig.DOUBLE_JUMP_VELOCITY);
                         character.setRemainingAirJumps(1);
                         character.setRemainingDashes(1);
                     }
@@ -190,28 +188,22 @@ public class GameLogic {
     private static void boundaryChecks(Character character, GameScene scene) {
         Rect characterHitBox = character.getHitBox();
         Vector2 pos = character.getPosition();
-        Vector2 vel = character.getVelocity();
-        // 下面if里的条件都不一定正确，到时候修改
+        // 下边界
+        if(characterHitBox.y < GameSceneConfig.GroundHeight){
+            pos.y -= characterHitBox.y - GameSceneConfig.GroundHeight;
+            character.setRemainingAirJumps(CharacterConfig.MAX_AIR_JUMPS);
+        }
         // 左边界
         if(characterHitBox.x < 0){
-            //修改pos的x值把受击框移到边界上
-            //把x方向速度改为0
+            pos.x -= characterHitBox.x;
         }
         // 右边界
-        if (pos.x + characterHitBox.width > scene.SCREEN_WIDTH) {
-            //同上
+        if (pos.x + characterHitBox.width >= GameSceneConfig.ScreenWidth) {
+            pos.x -= (pos.x + characterHitBox.width) - (GameSceneConfig.ScreenWidth - 1);
         }
         // 上边界
-        if (pos.y + characterHitBox.height > scene.SCREEN_HEIGHT) {
-            //修改pos的y值把受击框移到边界上
-            //把y方向速度改为0，加速度改为重力
-        }
-        // 下边界 (Ground)
-        if (pos.y < scene.GROUND_Y) {
-            pos.y = scene.GROUND_Y;
-            vel.y = 0;
-            character.setRemainingAirJumps(CharacterConfig.MAX_AIR_JUMPS);
-            character.setRemainingDashes(CharacterConfig.MAX_DASHES);
-        }
+        if (pos.y + characterHitBox.height >= GameSceneConfig.ScreenHeight) {
+            pos.y -= (pos.y + characterHitBox.height) - (GameSceneConfig.ScreenHeight - 1);
+        }   
     }
 }

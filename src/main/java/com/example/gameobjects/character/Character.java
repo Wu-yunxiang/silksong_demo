@@ -15,8 +15,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import javax.swing.Action;
-
 /**
  * 角色类 (Character Class)
  */
@@ -25,7 +23,6 @@ public class Character extends GameObject {
     private PurpleDragon purpleDragon; // 角色释放的龙波对象 (Purple Dragon Object)
     private boolean isAlive;            // 是否存活 (Is Alive)
     private boolean isImmune;            // 是否处于免疫状态 (Is Immune)
-    private boolean isFalling;          // 是否下落状态
     private float immunityTime;          // 免疫时间 (Immunity Time)
     private Vector2 velocity;            // 速度 (Velocity)
     private Vector2 acceleration;        // 加速度 (Acceleration)
@@ -45,7 +42,6 @@ public class Character extends GameObject {
         this.orientation= Orientation.RIGHT;
         this.behaviors = new HashMap<>();
         this.addBehavior(CharacterBehavior.STAND);
-        this.isFalling = false;
         this.isAlive = true;
         this.remainingAirJumps = CharacterConfig.MAX_AIR_JUMPS; 
         this.remainingDashes = CharacterConfig.MAX_DASHES;
@@ -231,7 +227,10 @@ public class Character extends GameObject {
     public Rect getAttackBox() {
         CharacterBehavior primaryBehavior = getPrimaryBehavior();
         CharacterPicturesInformation.PictureInformation pictureInfo = CharacterPicturesInformation.characterPicturesInfo.get(primaryBehavior).get(behaviors.get(primaryBehavior).actionNum-1);
-        
+
+        if(pictureInfo.attackBox == null){
+            return null;
+        }
         if(Orientation.RIGHT == this.orientation){
             return new Rect(position.x + pictureInfo.attackBox.x - pictureInfo.basePosition.x,
                             position.y + pictureInfo.attackBox.y - pictureInfo.basePosition.y,
@@ -279,7 +278,11 @@ public class Character extends GameObject {
                 acceleration.setX(0);
                 break;
             case JUMP:
-                velocity.setY(CharacterConfig.JUMP_VELOCITY);
+                if(remainingAirJumps > 1){
+                    velocity.setY(CharacterConfig.JUMP_VELOCITY);
+                } else {
+                    velocity.setY(CharacterConfig.DOUBLE_JUMP_VELOCITY);
+                }
                 acceleration.setY(CharacterConfig.GRAVITY);
                 remainingAirJumps--;
                 break;
@@ -405,6 +408,10 @@ public class Character extends GameObject {
         return getHitBox().y <= GameSceneConfig.GroundHeight;
     }
 
+    public boolean isFalling(){ //空中，下落 ，非阻塞状态
+        return !isOnGround() && velocity.y < 0 && !CharacterConfig.isBlocking(getPrimaryBehavior());
+    }
+
     public float getDashCooldown() {
         return remainingDashCooldown;
     }
@@ -453,6 +460,10 @@ public class Character extends GameObject {
     public Vector2 getVelocity() {
         return velocity;
     }
+
+    public Vector2 getAcceleration() {
+        return acceleration;
+    }   
 
     public int getActionNum() {
         return behaviors.get(getPrimaryBehavior()).actionNum;
