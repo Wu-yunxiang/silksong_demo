@@ -41,7 +41,7 @@ public class GameEngine {
             long currentTime = System.nanoTime();
             
             if (currentTime - lastFrameTime >= frameTimeNanos) {
-                GameLogic.processFrame((currentTime - lastFrameTime) / 1_000_000_000.0f,renderer.getScene());
+                GameLogic.processFrame((currentTime - lastFrameTime) / 1_000_000_000.0f, scene);
                 scene.render();
                 lastFrameTime = currentTime;
             }

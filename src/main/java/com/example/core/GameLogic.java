@@ -4,7 +4,6 @@ import com.example.input.InputManager;
 import com.example.gameobjects.character.Character;
 import com.example.gameobjects.character.Character.CharacterBehavior;
 import com.example.gameobjects.skill.PurpleDragon;
-import com.example.gameobjects.terrain.Terrain;
 import com.example.math.Rect;
 import com.example.scene.GameScene;
 import com.example.gameobjects.GameObject;
@@ -33,7 +32,7 @@ public class GameLogic {
     }
 
     private static void processInput(float deltaTime, GameScene scene) {
-        Character character = scene.getMainCharacter();
+        Character character = scene.getCharacter();
         InputManager input = InputManager.getInstance();
         input.pollEvents();
 
@@ -134,7 +133,7 @@ public class GameLogic {
     }
 
     private static void checkGameConditions(GameScene scene) {
-        Character character = scene.getMainCharacter();
+        Character character = scene.getCharacter();
         boundaryChecks(character, scene);// 合理化了更新之后的状态
         handleCollisions(character, scene);
     }

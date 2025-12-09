@@ -4,6 +4,8 @@ import java.util.List;
 
 import com.example.gameobjects.GameObject;
 import com.example.gameobjects.character.Character;
+import com.example.renderer.Renderer;
+
 import java.util.ArrayList;
 
 /**
@@ -12,7 +14,7 @@ import java.util.ArrayList;
 public class GameScene {
     //背景中的游戏对象
     private List<GameObject> gameObjects;
-    public GameScene() {
+    public GameScene(){ 
         gameObjects = new ArrayList<>();
     }
 
@@ -25,6 +27,10 @@ public class GameScene {
         return null;
     }
 
+    public void render(){
+        Renderer.render();
+    }
+
     public void removeGameObject(GameObject obj) {
         gameObjects.remove(obj);
     }
@@ -35,5 +41,9 @@ public class GameScene {
 
     public List<GameObject> getGameObjects() {
         return gameObjects;
+    }
+
+    public long getWindowHandle() {
+        return Renderer.getWindowHandle();
     }
 }
