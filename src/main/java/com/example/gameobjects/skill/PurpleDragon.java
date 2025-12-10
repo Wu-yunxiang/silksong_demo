@@ -15,6 +15,7 @@ import org.lwjgl.opengl.GL11;
  */
 public class PurpleDragon extends GameObject {
     private Vector2 position;        
+    private float initialPositionX;
     private boolean orientation;      // true为向右，false为向左
     private boolean isAlive;
     private boolean isComplete;         //形态
@@ -27,25 +28,31 @@ public class PurpleDragon extends GameObject {
         this.isComplete = false;
         this.owner = owner;
         this.speed = 0;
+        this.position = new Vector2();
 
-        // 计算横坐标：owner CAST_SKILL 状态的 skillStartActionNum 的图片右边界在界面里的横坐标
+        // 计算横坐标：owner CAST_SKILL 状态的 skillStartActionNum 的图片右边界（向右）/ 左边界（向左）在界面里的横坐标
         CharacterPicturesInformation.PictureInformation pi =CharacterPicturesInformation.characterPicturesInfo.get(Character.CharacterBehavior.CAST_SKILL).get(CharacterConfig.skillStartActionNum - 1);
         if (this.orientation) { // RIGHT
             this.position.x = owner.getPosition().x + pi.pictureSize.x - pi.basePosition.x;
         } else { // LEFT
             this.position.x = owner.getPosition().x + pi.basePosition.x - pi.pictureSize.x;
         }
-
-        // 纵坐标：使得 skillPicturesInfo[0] 的模型底部落在地面边界上
-        this.position.y = GameSceneConfig.GroundHeight + PurpleDragonConfig.skillPicturesInfo[0].basePosition.y;
+        initialPositionX = this.position.x;
+        // 纵坐标：使得 skillPicturesInfo[0] 的模型底部落在人物脚底
+        this.position.y = owner.getHitBox().y + PurpleDragonConfig.skillPicturesInfo[0].basePosition.y - PurpleDragonConfig.skillPicturesInfo[0].boundingBox.y;
 
         owner.setPurpleDragon(this);
     }
 
     @Override
     public void update(float deltaTime, GameScene scene) { // 每帧更新
+        if(!isAlive){
+            scene.removeGameObject(this);
+            return;
+        }
+
         if(!isComplete){
-            if(owner.getActionNum() >= CharacterConfig.skillCompleteActionNum){
+            if(owner.isAlive() && owner.getActionNum() >= CharacterConfig.skillCompleteActionNum){
                 isComplete = true;
                 speed = PurpleDragonConfig.SPEED;
             }else {
@@ -78,6 +85,13 @@ public class PurpleDragon extends GameObject {
         }
         float drawY = this.position.y - baseY;
 
+        GL11.glEnable(GL11.GL_SCISSOR_TEST);
+        if(this.orientation){
+            GL11.glScissor((int)this.initialPositionX, 0, GameSceneConfig.ScreenWidth, GameSceneConfig.ScreenHeight);
+        } else {
+            GL11.glScissor(0, 0, (int)this.initialPositionX, GameSceneConfig.ScreenHeight);
+        }
+
         GL11.glBindTexture(GL11.GL_TEXTURE_2D, texId);
         GL11.glBegin(GL11.GL_QUADS);
         if (this.orientation) {
@@ -92,6 +106,8 @@ public class PurpleDragon extends GameObject {
             GL11.glTexCoord2f(1f, 1f); GL11.glVertex2f(drawX, drawY + h);
         }
         GL11.glEnd();
+
+        GL11.glDisable(GL11.GL_SCISSOR_TEST);
     }
 
     public Rect getBoundingBox() {

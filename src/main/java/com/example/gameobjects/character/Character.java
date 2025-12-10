@@ -39,6 +39,8 @@ public class Character extends GameObject {
         this.scene = scene;
         this.position = new Vector2(GameSceneConfig.initialCharacterPositionX,
                                     GameSceneConfig.initialCharacterPositionY);
+        this.velocity = new Vector2();
+        this.acceleration = new Vector2();
         this.orientation= Orientation.RIGHT;
         this.behaviors = new HashMap<>();
         this.addBehavior(CharacterBehavior.STAND);
@@ -46,7 +48,7 @@ public class Character extends GameObject {
         this.remainingAirJumps = CharacterConfig.MAX_AIR_JUMPS; 
         this.remainingDashes = CharacterConfig.MAX_DASHES;
         this.health = CharacterConfig.MAX_HEALTH;
-        this.energy = 0;// 初始化血量和能量
+        this.energy = CharacterConfig.MAX_ENERGY;// 初始化血量和能量
     }
 
     /**
@@ -105,13 +107,20 @@ public class Character extends GameObject {
         float remainingTime = actionState.duration - deltaTime;
         if (remainingTime <= 0) {
             if(actionState.actionNum == getBehaviorSize(behavior)){
-                if(behavior == CharacterBehavior.HEAL){
-                    heal(CharacterConfig.HEAL_AMOUNT);
+                if (behavior == CharacterBehavior.STAND || behavior == CharacterBehavior.WALK) { // Loop STAND and WALK
+                    actionState.setActionNum(1);
+                    actionState.setDuration(getDuration(behavior, 1));
+                } else {
+                    if(behavior == CharacterBehavior.HEAL){
+                        heal(CharacterConfig.HEAL_AMOUNT);
+                    }
+                    if(behavior == CharacterBehavior.DASH){
+                        remainingDashCooldown = CharacterConfig.DASH_COOLDOWN;
+                    }
+                    if(behavior != CharacterBehavior.WALK && behavior != CharacterBehavior.STAND){
+                        removeBehavior(behavior);
+                    }
                 }
-                if(behavior == CharacterBehavior.DASH){
-                    remainingDashCooldown = CharacterConfig.DASH_COOLDOWN;
-                }
-                removeBehavior(behavior);
             }else{
                 actionState.setActionNum(actionState.actionNum + 1);
                 actionState.setDuration(getDuration(behavior, actionState.actionNum));
@@ -128,6 +137,11 @@ public class Character extends GameObject {
 
     @Override
     public void update(float deltaTime, GameScene scene) {
+        if(!isAlive){
+            scene.removeGameObject(this);
+            return;
+        }
+
         if(isImmune){
             immunityTime -= deltaTime;
             if(immunityTime <= 0){
@@ -145,9 +159,12 @@ public class Character extends GameObject {
         // 物理计算
         PhysicsUtils.updatePhysicsState(position, velocity, acceleration, deltaTime);
 
-        for(Map.Entry<CharacterBehavior, ActionState> entry : behaviors.entrySet()){
-            CharacterBehavior behavior = entry.getKey();
-            updateRemainingTime(deltaTime, behavior);
+        // 使用副本遍历，防止遍历过程中修改原始 Map 导致异常
+        List<CharacterBehavior> behaviorsCopy = new java.util.ArrayList<>(behaviors.keySet());
+        for(CharacterBehavior behavior : behaviorsCopy){
+            if(behaviors.containsKey(behavior)){
+                updateRemainingTime(deltaTime, behavior);
+            }
         } // 更新剩余时间 / 改变动作 / 去除掉已经结束的behavior
     }
 
@@ -155,6 +172,9 @@ public class Character extends GameObject {
     public void render() {
         // 根据当前主要行为与动作编号获取贴图信息
         CharacterBehavior primaryBehavior = getPrimaryBehavior();
+        if(!behaviors.containsKey(primaryBehavior)){
+            return; // behaviors is empty, nothing to render
+        }
         List<CharacterPicturesInformation.PictureInformation> pics = CharacterPicturesInformation.characterPicturesInfo.get(primaryBehavior);
         CharacterPicturesInformation.PictureInformation pictureInfo = pics.get(behaviors.get(primaryBehavior).actionNum - 1);
 

@@ -4,6 +4,7 @@ import org.lwjgl.glfw.GLFW;
 
 import com.example.input.InputManager;
 import com.example.pictureconfig.*;
+import com.example.renderer.Renderer;
 import com.example.scene.GameScene;
 import com.example.gameobjects.character.Character;
 
@@ -24,15 +25,17 @@ public class GameEngine {
 
     public void initialize(){
         this.isRunning = false;
-        this.inputManager = InputManager.getInstance();
-        setupInput();
+        Renderer.initial(); 
+        Renderer.render(scene.getGameObjects()); 
         CharacterConfigLoader.loadCharacterConfigs();
-
-        scene.getGameObjects().add(new Character(scene));
+        PurpleDragonConfigLoader.loadPurpleDragonConfig();
+        this.inputManager = InputManager.getInstance();
     }
 
     public void start(){
         this.isRunning = true;
+        scene.getGameObjects().add(new Character(scene));
+        setupInput();
         long lastFrameTime = System.nanoTime();
         long frameTimeNanos = (long)(1_000_000_000.0 / TARGET_FPS);
         while (isRunning) {

@@ -118,11 +118,15 @@ public class GameLogic {
 
         // walk 和 stand的处理放在最后
         if(input.isKeyPressed(GLFW.GLFW_KEY_A)||input.isKeyPressed(GLFW.GLFW_KEY_D)){
-            character.addBehavior(CharacterBehavior.WALK);
-        } else{
-            if(character.isOnGround() && character.getBehaviors().isEmpty()){
-                character.addBehavior(CharacterBehavior.STAND);
+            if(!character.hasBehavior(CharacterBehavior.WALK)){
+                character.addBehavior(CharacterBehavior.WALK);
             }
+        } else{
+            if(character.hasBehavior(CharacterBehavior.WALK)){
+                character.removeBehavior(CharacterBehavior.WALK);
+            }
+            
+            character.addBehavior(CharacterBehavior.STAND);
         }
     }
     
@@ -205,5 +209,14 @@ public class GameLogic {
         if (pos.y + characterHitBox.height >= GameSceneConfig.ScreenHeight) {
             pos.y -= (pos.y + characterHitBox.height) - (GameSceneConfig.ScreenHeight - 1);
         }   
+        //龙的边界检查
+        for(GameObject obj : scene.getGameObjects()) {
+            if(!(obj instanceof PurpleDragon)) continue;
+            PurpleDragon purpleDragon = (PurpleDragon) obj;
+            Rect dragonBox = purpleDragon.getBoundingBox();
+            if(dragonBox.x + dragonBox.width < 0 || dragonBox.x >= GameSceneConfig.ScreenWidth){
+                purpleDragon.setAlive(false);
+            }
+        }
     }
 }
