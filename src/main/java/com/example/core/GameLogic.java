@@ -112,7 +112,9 @@ public class GameLogic {
         // 优先级 4: 跳跃 (K)
         if (input.isKeyJustPressed(GLFW.GLFW_KEY_K)) {
             if (character.getRemainingAirJumps() > 0) {
-                character.addBehavior(CharacterBehavior.JUMP);
+                if(!(character.hasBehavior(CharacterBehavior.JUMP) && character.getBehaviors().get(CharacterBehavior.JUMP).actionNum < CharacterConfig.flyingActionNum)){
+                    character.addBehavior(CharacterBehavior.JUMP);
+                }
             }
         }
 
@@ -196,8 +198,12 @@ public class GameLogic {
         Vector2 pos = character.getPosition();
         // 下边界
         if(characterHitBox.y < GameSceneConfig.GroundHeight){
+            if(!character.getGroundLock()){
+                character.setIsOnGround(true);
+            }else{
+                character.setGroundLock(false);
+            }
             pos.y -= characterHitBox.y - GameSceneConfig.GroundHeight;
-            character.setIsOnGround(true);
             character.setRemainingAirJumps(CharacterConfig.MAX_AIR_JUMPS);
             character.setRemainingDashes(CharacterConfig.MAX_DASHES);
         }
