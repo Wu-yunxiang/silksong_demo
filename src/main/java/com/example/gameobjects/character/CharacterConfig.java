@@ -20,6 +20,7 @@ public class CharacterConfig {
     public static final int MAX_ENERGY = 12;
     public static final int skillStartActionNum = 3;
     public static final int skillCompleteActionNum = 5;
+    public static final int flyingActionNum = 3;
     public static final int fallingActionNum = 4;
 
     // 回血

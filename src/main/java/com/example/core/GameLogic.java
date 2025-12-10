@@ -125,20 +125,25 @@ public class GameLogic {
             if(character.hasBehavior(CharacterBehavior.WALK)){
                 character.removeBehavior(CharacterBehavior.WALK);
             }
-            
-            character.addBehavior(CharacterBehavior.STAND);
+            if(character.isOnGround() && character.getBehaviors().isEmpty()){
+                character.addBehavior(CharacterBehavior.STAND);
+            }
         }
     }
     
     private static void updateGameLogic(float deltaTime, GameScene scene) {
-        //只有人物和龙update不为空，相当于更新人物和屏幕里的所有龙, 先更新人物再更新龙
-        for (GameObject obj : scene.getGameObjects()) {
+        // 只有人物和龙update不为空，相当于更新人物和屏幕里的所有龙, 先更新人物再更新龙
+        // 使用副本进行遍历，防止循环中修改List出错
+        java.util.List<GameObject> objects = new java.util.ArrayList<>(scene.getGameObjects());
+        
+        for (GameObject obj : objects) {
             if(obj instanceof Character){
                 obj.update(deltaTime, scene);
             }
         }  
 
-        for(GameObject obj : scene.getGameObjects()) {
+        objects = new java.util.ArrayList<>(scene.getGameObjects());
+        for(GameObject obj : objects) {
             if(obj instanceof PurpleDragon){
                 obj.update(deltaTime, scene);
             }
@@ -195,7 +200,9 @@ public class GameLogic {
         // 下边界
         if(characterHitBox.y < GameSceneConfig.GroundHeight){
             pos.y -= characterHitBox.y - GameSceneConfig.GroundHeight;
+            character.setIsOnGround(true);
             character.setRemainingAirJumps(CharacterConfig.MAX_AIR_JUMPS);
+            character.setRemainingDashes(CharacterConfig.MAX_DASHES);
         }
         // 左边界
         if(characterHitBox.x < 0){

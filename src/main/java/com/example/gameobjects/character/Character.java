@@ -20,6 +20,7 @@ import java.util.Map;
  */
 public class Character extends GameObject {
     private GameScene scene;
+    private boolean isOnGround;        // 是否在地面上 (Is On Ground)
     private PurpleDragon purpleDragon; // 角色释放的龙波对象 (Purple Dragon Object)
     private boolean isAlive;            // 是否存活 (Is Alive)
     private boolean isImmune;            // 是否处于免疫状态 (Is Immune)
@@ -37,13 +38,14 @@ public class Character extends GameObject {
 
     public Character(GameScene scene) {
         this.scene = scene;
-        this.position = new Vector2(GameSceneConfig.initialCharacterPositionX,
-                                    GameSceneConfig.initialCharacterPositionY);
+        this.isOnGround = true;
+        this.position = new Vector2();
         this.velocity = new Vector2();
         this.acceleration = new Vector2();
         this.orientation= Orientation.RIGHT;
         this.behaviors = new HashMap<>();
         this.addBehavior(CharacterBehavior.STAND);
+        this.position.x = GameSceneConfig.initialCharacterPositionX;
         this.isAlive = true;
         this.remainingAirJumps = CharacterConfig.MAX_AIR_JUMPS; 
         this.remainingDashes = CharacterConfig.MAX_DASHES;
@@ -117,11 +119,27 @@ public class Character extends GameObject {
                     if(behavior == CharacterBehavior.DASH){
                         remainingDashCooldown = CharacterConfig.DASH_COOLDOWN;
                     }
-                    if(behavior != CharacterBehavior.WALK && behavior != CharacterBehavior.STAND){
-                        removeBehavior(behavior);
-                    }
+                    removeBehavior(behavior);
                 }
             }else{
+                if(behavior ==CharacterBehavior.JUMP){
+                    if(getPrimaryBehavior() != CharacterBehavior.JUMP) return;
+                    if(actionState.actionNum == CharacterConfig.flyingActionNum){
+                        if(!isFalling()) return;
+                    }else if(actionState.actionNum == CharacterConfig.fallingActionNum){
+                        actionState.setActionNum(actionState.actionNum + 1);
+                        if(getHitBox().y > GameSceneConfig.GroundHeight){
+                            actionState.setActionNum(CharacterConfig.fallingActionNum);
+                            return;
+                        }
+                        actionState.setActionNum(CharacterConfig.fallingActionNum);
+                        isOnGround = true;
+                        velocity.setY(0);
+                        acceleration.setY(0);
+                        setRemainingAirJumps(CharacterConfig.MAX_AIR_JUMPS);
+                        setRemainingDashes(CharacterConfig.MAX_DASHES);
+                    }
+                }
                 actionState.setActionNum(actionState.actionNum + 1);
                 actionState.setDuration(getDuration(behavior, actionState.actionNum));
                 if(behavior == CharacterBehavior.CAST_SKILL){
@@ -129,7 +147,22 @@ public class Character extends GameObject {
                         scene.addGameObject(new PurpleDragon(this));
                     } 
                 }
+
+                if(behavior ==CharacterBehavior.JUMP){
+                    if(CharacterConfig.flyingActionNum == actionState.actionNum){
+                        if(remainingAirJumps > 1){
+                            velocity.setY(CharacterConfig.JUMP_VELOCITY);
+                        } else {
+                            velocity.setY(CharacterConfig.DOUBLE_JUMP_VELOCITY);
+                        }
+                        acceleration.setY(CharacterConfig.GRAVITY);
+                        isOnGround = false;
+                        remainingAirJumps--;
+                    }
+                }
             }
+
+            fixHeight();
         } else {
             actionState.setDuration(remainingTime);
         }
@@ -137,6 +170,9 @@ public class Character extends GameObject {
 
     @Override
     public void update(float deltaTime, GameScene scene) {
+        if(hasBehavior(CharacterBehavior.JUMP)){
+            System.out.println("GG");
+        }
         if(!isAlive){
             scene.removeGameObject(this);
             return;
@@ -166,6 +202,14 @@ public class Character extends GameObject {
                 updateRemainingTime(deltaTime, behavior);
             }
         } // 更新剩余时间 / 改变动作 / 去除掉已经结束的behavior
+    }
+
+    public void fixHeight(){
+        if(isOnGround){
+            position.y -= getHitBox().y - GameSceneConfig.GroundHeight;
+            velocity.setY(0);
+            acceleration.setY(0);
+        }
     }
 
     @Override
@@ -297,15 +341,6 @@ public class Character extends GameObject {
                 velocity.setX((orientation == Orientation.RIGHT) ? CharacterConfig.WALK_SPEED : -CharacterConfig.WALK_SPEED);
                 acceleration.setX(0);
                 break;
-            case JUMP:
-                if(remainingAirJumps > 1){
-                    velocity.setY(CharacterConfig.JUMP_VELOCITY);
-                } else {
-                    velocity.setY(CharacterConfig.DOUBLE_JUMP_VELOCITY);
-                }
-                acceleration.setY(CharacterConfig.GRAVITY);
-                remainingAirJumps--;
-                break;
             case DASH:
                 velocity.set((orientation == Orientation.RIGHT) ? CharacterConfig.DASH_SPEED : -CharacterConfig.DASH_SPEED, 0);
                 acceleration.set(0,0);
@@ -333,6 +368,8 @@ public class Character extends GameObject {
             default:
                 break;
         }
+
+        fixHeight();
     }
 
     public void clearBehaviors() { //处理中断情况
@@ -425,7 +462,11 @@ public class Character extends GameObject {
     }
 
     public boolean isOnGround() {
-        return getHitBox().y <= GameSceneConfig.GroundHeight;
+        return isOnGround;
+    }
+
+    public void setIsOnGround(boolean isOnGround) {
+        this.isOnGround = isOnGround;
     }
 
     public boolean isFalling(){ //空中，下落 ，非阻塞状态
