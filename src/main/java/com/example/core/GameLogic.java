@@ -116,7 +116,7 @@ public class GameLogic {
             }
         }
 
-        // walk 和 stand的处理放在最后
+        // walk 的处理放在最后 ， stand 是默认情况在character内部处理过了
         if(input.isKeyPressed(GLFW.GLFW_KEY_A)||input.isKeyPressed(GLFW.GLFW_KEY_D)){
             if(!character.hasBehavior(CharacterBehavior.WALK)){
                 character.addBehavior(CharacterBehavior.WALK);
@@ -124,9 +124,6 @@ public class GameLogic {
         } else{
             if(character.hasBehavior(CharacterBehavior.WALK)){
                 character.removeBehavior(CharacterBehavior.WALK);
-            }
-            if(character.isOnGround() && character.getBehaviors().isEmpty()){
-                character.addBehavior(CharacterBehavior.STAND);
             }
         }
     }
@@ -171,7 +168,7 @@ public class GameLogic {
                 }
 
                 if(!attackSpikes && character.hasBehavior(CharacterBehavior.ATTACK_DOWN)){
-                    if (characterAttackBox.intersects(spikesBounding)) {
+                    if (characterAttackBox != null && characterAttackBox.intersects(spikesBounding)) {
                         attackSpikes = true;
                         character.getVelocity().setY(CharacterConfig.DOUBLE_JUMP_VELOCITY);
                         character.setRemainingAirJumps(1);
@@ -184,7 +181,7 @@ public class GameLogic {
                 if(!(object instanceof PurpleDragon)) continue;
                 PurpleDragon purpleDragon = (PurpleDragon) object;
                 if(character.hasBehavior(CharacterBehavior.ATTACK_DOWN)){
-                    if (characterAttackBox.intersects(purpleDragon.getBoundingBox())) {
+                    if (characterAttackBox != null && characterAttackBox.intersects(purpleDragon.getBoundingBox())) {
                         character.getVelocity().setY(CharacterConfig.DOUBLE_JUMP_VELOCITY);
                         character.setRemainingAirJumps(1);
                         character.setRemainingDashes(1);

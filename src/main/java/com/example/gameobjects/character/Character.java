@@ -162,7 +162,9 @@ public class Character extends GameObject {
                 }
             }
 
-            fixHeight();
+            if(!behaviors.isEmpty()){
+                fixHeight();
+            }
         } else {
             actionState.setDuration(remainingTime);
         }
@@ -170,9 +172,6 @@ public class Character extends GameObject {
 
     @Override
     public void update(float deltaTime, GameScene scene) {
-        if(hasBehavior(CharacterBehavior.JUMP)){
-            System.out.println("GG");
-        }
         if(!isAlive){
             scene.removeGameObject(this);
             return;
@@ -193,6 +192,11 @@ public class Character extends GameObject {
         }//更新冲刺冷却时间
 
         // 物理计算
+        if(orientation == Orientation.LEFT){
+            velocity.x = -Math.abs(velocity.x);
+        } else{
+            velocity.x = Math.abs(velocity.x);
+        }
         PhysicsUtils.updatePhysicsState(position, velocity, acceleration, deltaTime);
 
         // 使用副本遍历，防止遍历过程中修改原始 Map 导致异常
@@ -372,8 +376,15 @@ public class Character extends GameObject {
         fixHeight();
     }
 
-    public void clearBehaviors() { //处理中断情况
-        for(CharacterBehavior behavior : behaviors.keySet()){
+    public void clearBehaviors() { // 处理中断情况
+
+        // 使用副本遍历，防止遍历过程中修改原始 Map 导致异常
+        List<CharacterBehavior> behaviorsCopy = new java.util.ArrayList<>(behaviors.keySet());
+        for(CharacterBehavior behavior : behaviorsCopy){
+            if(!behaviors.containsKey(behavior)){
+                continue;
+            }
+
             if(behavior == CharacterBehavior.JUMP){
                 continue;
             }
@@ -409,6 +420,9 @@ public class Character extends GameObject {
         }
 
         this.behaviors.remove(behavior);
+        if(behaviors.isEmpty()){
+            addBehavior(CharacterBehavior.STAND);
+        }
     }
 
     public Map<CharacterBehavior, ActionState> getBehaviors() {

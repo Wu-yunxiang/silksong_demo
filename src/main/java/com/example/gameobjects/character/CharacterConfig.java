@@ -7,11 +7,11 @@ import com.example.gameobjects.character.Character.CharacterBehavior;
  */
 public class CharacterConfig {
     // 物理常量
-    public static final float GRAVITY = -3800.0f;
+    public static final float GRAVITY = -3000.0f;
     public static final float WALK_SPEED = 450.0f;
     public static final float JUMP_VELOCITY = 1250.0f;
     public static final float DOUBLE_JUMP_VELOCITY = 1100.0f;
-    public static final float DASH_SPEED = 1500.0f;
+    public static final float DASH_SPEED = 1000.0f;
 
     // 游戏逻辑常量
     public static final int MAX_AIR_JUMPS = 2;
@@ -28,7 +28,7 @@ public class CharacterConfig {
     public static final int HEAL_AMOUNT = 1;
 
     //冲刺冷却时间 (秒)
-    public static final float DASH_COOLDOWN = 0.35f;
+    public static final float DASH_COOLDOWN = 0.1f;
     // 受伤后免疫时间 (秒)
     public static final float IMMUNITY_DURATION = 1.0f; 
 
